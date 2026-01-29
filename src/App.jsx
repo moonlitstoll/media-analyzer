@@ -273,8 +273,10 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                     function getCurrentIndex() {
                         if (!video || !transcriptData || transcriptData.length === 0) return -1;
                         const now = video.currentTime;
+                        // Add 1.0s buffer to 'now' so that during pre-roll, the upcoming sentence is considered active
+                        const adjustedNow = now + 1.0;
                         return transcriptData.findIndex((item, i) => 
-                            now >= item.seconds && (i === transcriptData.length - 1 || now < transcriptData[i+1].seconds)
+                            adjustedNow >= item.seconds && (i === transcriptData.length - 1 || adjustedNow < transcriptData[i+1].seconds)
                         );
                     }
 
@@ -815,8 +817,9 @@ const App = () => {
   // Derived current sentence index
   const currentSentenceIdx = useMemo(() => {
     if (!transcriptData || transcriptData.length === 0) return -1;
+    const adjustedNow = currentTime + 1.0;
     return transcriptData.findIndex((item, idx) =>
-      currentTime >= item.seconds && (idx === transcriptData.length - 1 || currentTime < transcriptData[idx + 1].seconds)
+      adjustedNow >= item.seconds && (idx === transcriptData.length - 1 || adjustedNow < transcriptData[idx + 1].seconds)
     );
   }, [transcriptData, currentTime]);
 
@@ -949,8 +952,14 @@ const App = () => {
 
       switch (e.code) {
         case 'Enter': if (currentIdx !== -1) toggleLoop(currentIdx); break;
-        case 'ArrowLeft': handlePrev(currentIdx); break;
-        case 'ArrowRight': handleNext(currentIdx); break;
+        case 'ArrowLeft':
+          if (currentIdx > 0) handlePrev(currentIdx);
+          else if (currentIdx === -1 && data.length > 0) jumpToSentence(0);
+          break;
+        case 'ArrowRight':
+          if (currentIdx < data.length - 1) handleNext(currentIdx);
+          else if (currentIdx === -1 && data.length > 0) jumpToSentence(0);
+          break;
         case 'ArrowUp': e.preventDefault(); setVolume(v => Math.min(v + 0.1, 1)); break;
         case 'ArrowDown': e.preventDefault(); setVolume(v => Math.max(v - 0.1, 0)); break;
       }
