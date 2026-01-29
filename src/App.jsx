@@ -376,6 +376,15 @@ const generateHTML = (data, filename, mediaDataUrl) => {
 
                         if(playBtn) playBtn.onclick = () => video.paused ? video.play() : video.pause();
                         if(muteBtn) muteBtn.onclick = () => { video.muted = !video.muted; };
+                        if(speedBtn) speedBtn.onclick = () => { if(speedMenu) speedMenu.classList.toggle('hidden'); };
+                        if(speedOpts) speedOpts.forEach(opt => {
+                            opt.onclick = () => {
+                                const val = parseFloat(opt.dataset.val);
+                                video.playbackRate = val;
+                                if(speedDisplay) speedDisplay.textContent = val + 'x';
+                                if(speedMenu) speedMenu.classList.add('hidden');
+                            };
+                        });
                         // volumeSlider was removed from HTML, so this line is commented out or removed
                         // if(volumeSlider) volumeSlider.oninput = (e) => video.volume = e.target.value;
                         if(speedBtn) speedBtn.onclick = () => { if(speedMenu) speedMenu.classList.toggle('hidden'); };
@@ -779,6 +788,7 @@ const App = () => {
 
   // UI state
   const [showAnalysis, setShowAnalysis] = useState(true);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
 
   const videoRef = useRef(null);
