@@ -109,10 +109,21 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                                  <button id="next-btn" class="p-1 sm:p-2 text-slate-400 hover:text-indigo-600 active:scale-95 transition-transform"><i data-lucide="chevron-right" class="w-6 h-6 sm:w-8 sm:h-8"></i></button>
                              </div>
 
-                             <!-- Right Spacer / Volume -->
-                             <div class="flex items-center gap-1 sm:gap-3">
-                                 <button id="mute-btn" class="p-1 sm:p-0 text-slate-400 hover:text-indigo-600 transition-colors"><i data-lucide="volume-2" class="w-5 h-5 sm:w-6 sm:h-6"></i></button>
-                                 <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="1" class="hidden sm:block w-32 sm:w-48 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                             <!-- Right: Volume Popup -->
+                             <div class="relative">
+                                 <button id="mute-btn" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
+                                     <i data-lucide="volume-2" class="w-6 h-6"></i>
+                                 </button>
+                                 <div id="volume-menu" class="hidden absolute bottom-full right-0 mb-3 bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 min-w-[60px] z-[60]">
+                                     <div class="flex flex-col items-center gap-3">
+                                          <span id="volume-display" class="text-xs font-bold text-slate-500">100%</span>
+                                          <div class="h-32 py-2">
+                                              <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" 
+                                                     style="appearance: slider-vertical; -webkit-appearance: slider-vertical; width: 8px; height: 100%;" 
+                                                     class="cursor-pointer accent-indigo-600">
+                                          </div>
+                                     </div>
+                                 </div>
                              </div>
                          </div>
                     </div>
@@ -377,27 +388,47 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                         });
 
                         if(playBtn) playBtn.onclick = () => video.paused ? video.play() : video.pause();
-                        if(muteBtn) muteBtn.onclick = () => { video.muted = !video.muted; };
+                        const volumeMenu = document.getElementById('volume-menu');
+                        const volumeDisplay = document.getElementById('volume-display');
+
+                        if(muteBtn) muteBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            if(volumeMenu) volumeMenu.classList.toggle('hidden');
+                            if(speedMenu) speedMenu.classList.add('hidden');
+                        };
                         
-                        if(speedBtn) speedBtn.onclick = () => { if(speedMenu) speedMenu.classList.toggle('hidden'); };
+                        if(speedBtn) speedBtn.onclick = (e) => { 
+                            e.stopPropagation();
+                            if(speedMenu) speedMenu.classList.toggle('hidden'); 
+                            if(volumeMenu) volumeMenu.classList.add('hidden');
+                        };
+                        
                         if(speedOpts) speedOpts.forEach(opt => {
-                            opt.onclick = () => {
+                            opt.onclick = (e) => {
+                                e.stopPropagation();
                                 const val = parseFloat(opt.dataset.val);
-                                video.playbackRate = val;
+                                if(video) video.playbackRate = val;
                                 if(speedDisplay) speedDisplay.textContent = val + 'x';
                                 if(speedMenu) speedMenu.classList.add('hidden');
                             };
                         });
 
                         const volumeSlider = document.getElementById('volume-slider');
-                        if(volumeSlider) volumeSlider.oninput = (e) => {
-                             if(video) video.volume = e.target.value;
-                        };
+                        if(volumeSlider) {
+                            volumeSlider.onclick = (e) => e.stopPropagation();
+                            volumeSlider.oninput = (e) => {
+                                const val = parseFloat(e.target.value);
+                                if(video) video.volume = val;
+                                if(volumeDisplay) volumeDisplay.textContent = Math.round(val * 100) + '%';
+                            };
+                        }
+
                         if(video) video.addEventListener('volumechange', () => {
                              if(volumeSlider) volumeSlider.value = video.volume;
+                             if(volumeDisplay) volumeDisplay.textContent = Math.round(video.volume * 100) + '%';
                              if(muteBtn) {
-                                 if(video.muted || video.volume === 0) muteBtn.innerHTML = '<i data-lucide="volume-x" class="w-5 h-5"></i>';
-                                 else muteBtn.innerHTML = '<i data-lucide="volume-2" class="w-5 h-5"></i>';
+                                 if(video.muted || video.volume === 0) muteBtn.innerHTML = '<i data-lucide="volume-x" class="w-6 h-6"></i>';
+                                 else muteBtn.innerHTML = '<i data-lucide="volume-2" class="w-6 h-6"></i>';
                                  if(window.lucide) lucide.createIcons();
                              }
                         });
@@ -575,11 +606,25 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                             window.jumpTo(targetIdx);
                         } else if (e.code === 'ArrowUp') {
                             e.preventDefault();
-                            if(video) video.volume = Math.min(1, video.volume + 0.1);
+                            if(video) {
+                                video.volume = Math.min(1, video.volume + 0.1);
+                                if(volumeSlider) volumeSlider.value = video.volume;
+                                if(volumeDisplay) volumeDisplay.textContent = Math.round(video.volume * 100) + '%';
+                            }
                         } else if (e.code === 'ArrowDown') {
                             e.preventDefault();
-                            if(video) video.volume = Math.max(0, video.volume - 0.1);
+                            if(video) {
+                                video.volume = Math.max(0, video.volume - 0.1);
+                                if(volumeSlider) volumeSlider.value = video.volume;
+                                if(volumeDisplay) volumeDisplay.textContent = Math.round(video.volume * 100) + '%';
+                            }
                         }
+                    });
+
+                    // Close menus on click outside
+                    document.addEventListener('click', () => {
+                        if(speedMenu) speedMenu.classList.add('hidden');
+                        if(volumeMenu) volumeMenu.classList.add('hidden');
                     });
 
                     if(analyzeBtn) {
@@ -829,6 +874,7 @@ const App = () => {
   // UI state
   const [showAnalysis, setShowAnalysis] = useState(true);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [showVolumeMenu, setShowVolumeMenu] = useState(false);
   const [cacheKeys, setCacheKeys] = useState([]);
 
 
@@ -1349,7 +1395,7 @@ const App = () => {
         {/* Active File Content */}
         {activeFile ? (
           <div className="flex flex-col h-full">
-            <div className="flex-1 w-full overflow-y-auto bg-[#F8FAFC]" onClick={() => setShowSpeedMenu(false)}>
+            <div className="flex-1 w-full overflow-y-auto bg-[#F8FAFC]" onClick={() => { setShowSpeedMenu(false); setShowVolumeMenu(false); }}>
               <div className="max-w-6xl mx-auto p-4 md:p-6 pb-32">
                 {isAnalyzing ? (
                   <div className="flex flex-col items-center justify-center py-20 space-y-6">
@@ -1498,19 +1544,47 @@ const App = () => {
                       </div>
 
                       {/* Right: Volume */}
-                      <div className="flex items-center gap-3 pr-4">
-                        <button onClick={() => setVolume(volume === 0 ? 1 : 0)} className="text-slate-400 hover:text-indigo-600 transition-colors">
+                      <div className="relative pr-6">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowVolumeMenu(!showVolumeMenu); }}
+                          className="text-slate-400 hover:text-indigo-600 transition-colors p-2"
+                        >
                           {volume === 0 ? <VolumeX size={24} /> : <Volume2 size={24} />}
                         </button>
-                        <input
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.05"
-                          value={volume}
-                          onChange={(e) => setVolume(parseFloat(e.target.value))}
-                          className="w-32 sm:w-48 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                        />
+
+                        {showVolumeMenu && (
+                          <div
+                            className="absolute bottom-full right-0 mb-3 bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 z-[60] animate-in slide-in-from-bottom-2 duration-200"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex flex-col items-center gap-3">
+                              <span className="text-xs font-bold text-slate-500">{Math.round(volume * 100)}%</span>
+                              <div className="h-32 flex items-center justify-center py-2">
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="1"
+                                  step="0.05"
+                                  value={volume}
+                                  onChange={(e) => setVolume(parseFloat(e.target.value))}
+                                  style={{
+                                    appearance: 'slider-vertical',
+                                    WebkitAppearance: 'slider-vertical',
+                                    width: '8px',
+                                    height: '100%'
+                                  }}
+                                  className="h-full cursor-pointer accent-indigo-600"
+                                />
+                              </div>
+                              <button
+                                onClick={() => setVolume(volume === 0 ? 1 : 0)}
+                                className="text-slate-400 hover:text-indigo-600 transition-colors"
+                              >
+                                {volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                     </div>
