@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Play, Pause, Rewind, FastForward,
   Eye, EyeOff, Languages, List, Search, Upload,
@@ -82,7 +82,7 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                          <div class="flex items-center justify-between mt-0.5 relative">
                              <!-- Speed Selector (Popup) -->
                              <div class="relative">
-                                 <button id="speed-btn" class="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-200 transition-colors">
+                                 <button id="speed-btn" class="flex items-center justify-center gap-2 px-6 py-2 bg-slate-100 rounded-xl text-base font-bold text-slate-700 hover:bg-slate-200 transition-all min-w-[120px]">
                                      <span id="speed-display">1.0x</span>
                                  </button>
                                  <div id="speed-menu" class="hidden absolute bottom-full left-0 mb-3 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 min-w-[120px] grid grid-cols-1 gap-1 z-[60]">
@@ -106,9 +106,10 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                                  <button id="next-btn" class="p-2 text-slate-400 hover:text-indigo-600 active:scale-95 transition-transform"><i data-lucide="chevron-right" class="w-8 h-8"></i></button>
                              </div>
 
-                             <!-- Right Spacer / Volume (Hidden on small) -->
-                             <div class="w-12 flex justify-end">
-                                 <button id="mute-btn" class="p-2 text-slate-400 hover:text-indigo-600"><i data-lucide="volume-2" class="w-5 h-5"></i></button>
+                             <!-- Right Spacer / Volume -->
+                             <div class="flex items-center gap-3">
+                                 <button id="mute-btn" class="text-slate-400 hover:text-indigo-600 transition-colors"><i data-lucide="volume-2" class="w-6 h-6"></i></button>
+                                 <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="1" class="w-32 sm:w-48 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
                              </div>
                          </div>
                     </div>
@@ -385,8 +386,18 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                                 if(speedMenu) speedMenu.classList.add('hidden');
                             };
                         });
-                        // volumeSlider was removed from HTML, so this line is commented out or removed
-                        // if(volumeSlider) volumeSlider.oninput = (e) => video.volume = e.target.value;
+                        const volumeSlider = document.getElementById('volume-slider');
+                        if(volumeSlider) volumeSlider.oninput = (e) => {
+                             if(video) video.volume = e.target.value;
+                        };
+                        if(video) video.addEventListener('volumechange', () => {
+                             if(volumeSlider) volumeSlider.value = video.volume;
+                             if(muteBtn) {
+                                 if(video.muted || video.volume === 0) muteBtn.innerHTML = '<i data-lucide="volume-x" class="w-5 h-5"></i>';
+                                 else muteBtn.innerHTML = '<i data-lucide="volume-2" class="w-5 h-5"></i>';
+                                 if(window.lucide) lucide.createIcons();
+                             }
+                        });
                         if(speedBtn) speedBtn.onclick = () => { if(speedMenu) speedMenu.classList.toggle('hidden'); };
                         if(speedOpts) speedOpts.forEach(opt => {
                             opt.onclick = () => {
@@ -789,6 +800,7 @@ const App = () => {
   // UI state
   const [showAnalysis, setShowAnalysis] = useState(true);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [cacheKeys, setCacheKeys] = useState([]);
 
 
   const videoRef = useRef(null);
@@ -807,6 +819,28 @@ const App = () => {
     localStorage.setItem('miniapp_gemini_key', key);
     setApiKey(key);
     setShowSettings(false);
+  };
+
+  useEffect(() => {
+    if (showSettings) {
+      setCacheKeys(Object.keys(localStorage).filter(k => k.startsWith('gemini_analysis_')));
+    }
+  }, [showSettings]);
+
+  const deleteCache = (key) => {
+    if (confirm('Delete this cached transcript?')) {
+      localStorage.removeItem(key);
+      setCacheKeys(prev => prev.filter(k => k !== key));
+    }
+  };
+
+  const clearAllCache = () => {
+    const count = cacheKeys.length;
+    if (confirm(`Clear all ${count} cached analysis files?`)) {
+      cacheKeys.forEach(k => localStorage.removeItem(k));
+      setCacheKeys([]);
+      alert("All cache cleared!");
+    }
   };
 
   // Media Controls
@@ -1056,15 +1090,29 @@ const App = () => {
                 <button onClick={() => saveApiKey(apiKey)} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl">Save Key</button>
 
                 <div className="pt-4 border-t border-slate-100">
-                  <button onClick={() => {
-                    const count = Object.keys(localStorage).filter(k => k.startsWith('gemini_analysis_')).length;
-                    if (confirm(`Clear ${count} cached analysis files?`)) {
-                      Object.keys(localStorage).filter(k => k.startsWith('gemini_analysis_')).forEach(k => localStorage.removeItem(k));
-                      alert("Cache cleared!");
-                    }
-                  }} className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl flex items-center justify-center gap-2">
-                    <Trash2 size={16} /> Clear Analysis Cache
-                  </button>
+                  <h4 className="font-bold text-slate-800 mb-2 text-sm">Cached Transcripts</h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto mb-3 pr-1 bg-slate-50/50 rounded-lg p-1">
+                    {cacheKeys.length === 0 ? (
+                      <p className="text-xs text-slate-400 text-center py-2">No cached files found.</p>
+                    ) : (
+                      cacheKeys.map(key => {
+                        const name = key.replace('gemini_analysis_', '').replace(/_\d+$/, '');
+                        return (
+                          <div key={key} className="flex items-center justify-between bg-white border border-slate-200 p-2 rounded-lg shadow-sm">
+                            <span className="text-xs font-medium text-slate-600 truncate max-w-[180px]" title={key}>{name}</span>
+                            <button onClick={() => deleteCache(key)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors" title="Delete">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                  {cacheKeys.length > 0 && (
+                    <button onClick={clearAllCache} className="w-full py-2 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 font-bold rounded-xl flex items-center justify-center gap-2 text-sm transition-colors">
+                      <Trash2 size={14} /> Clear All Cache
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1171,102 +1219,8 @@ const App = () => {
 
         {/* Active File Content */}
         {activeFile ? (
-          <>
-            {/* Top: Video Player & Controls (Sticky Redesign) */}
-            <div className="flex-none bg-white border-b border-slate-200 z-10 shadow-sm sticky top-0">
-              <div className="max-w-3xl mx-auto">
-                <div className="flex flex-row h-[72px] items-stretch">
-                  {/* Video (Square, Left) */}
-                  <div className="relative bg-black h-full aspect-square flex-shrink-0 border-r border-slate-100 group">
-                    <video
-                      ref={videoRef}
-                      src={mediaUrl}
-                      className="w-full h-full object-contain"
-                      onClick={togglePlay}
-                      playsInline
-                      loop
-                    />
-                    {!isPlaying && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-                        <Play size={20} fill="white" className="text-white ml-0.5" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Controls (Right, Flex Column, Compact) */}
-                  <div className="flex-1 px-4 py-2 flex flex-col justify-center gap-1 min-w-0 bg-white">
-
-                    {/* Row 1: Time & Progress */}
-                    <div className="flex items-center gap-3 text-[10px] font-mono font-medium text-slate-400">
-                      <span className="w-8 shrink-0">{new Date(currentTime * 1000).toISOString().substr(14, 5)}</span>
-
-                      <div
-                        className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden cursor-pointer group relative"
-                        onClick={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          seekTo(((e.clientX - rect.left) / rect.width) * videoRef.current.duration);
-                        }}
-                      >
-                        <div className="absolute inset-0 w-full h-full hover:bg-slate-200/50 transition-colors" />
-                        <div
-                          className="h-full bg-indigo-500 rounded-full relative group-hover:bg-indigo-600 transition-colors"
-                          style={{ width: `${videoRef.current?.duration ? (currentTime / videoRef.current.duration) * 100 : 0}%` }}
-                        />
-                      </div>
-
-                      <span className="w-8 shrink-0 text-right">{videoRef.current?.duration ? new Date(videoRef.current.duration * 1000).toISOString().substr(14, 5) : "00:00"}</span>
-                    </div>
-
-                    {/* Row 2: Main Buttons (Centered) */}
-                    <div className="flex items-center justify-between mt-1">
-
-                      {/* Left: Speed */}
-                      <div className="w-12 flex justify-start">
-                        <div className="flex items-center gap-1 opacity-50 hover:opacity-100 transition-opacity">
-                          <span className="text-[10px] font-bold text-slate-600 w-6 text-center">{playbackRate.toFixed(1)}x</span>
-                          <input type="range" min="0.5" max="2.0" step="0.1" value={playbackRate} onChange={(e) => setPlaybackRate(parseFloat(e.target.value))} className="w-8 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-500" />
-                        </div>
-                      </div>
-
-                      {/* Center: Prev - Play - Next */}
-                      <div className="flex items-center gap-4">
-                        <button
-                          onClick={() => handlePrev(typeof loopingSentenceIdx === 'number' ? loopingSentenceIdx : transcriptData.findIndex(item => item.seconds > currentTime))}
-                          className="p-2 text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform"
-                        >
-                          <ChevronLeft size={24} />
-                        </button>
-
-                        <button
-                          onClick={togglePlay}
-                          className="w-10 h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-md shadow-indigo-500/30 active:scale-95 transition-all"
-                        >
-                          {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
-                        </button>
-
-                        <button
-                          onClick={() => handleNext(typeof loopingSentenceIdx === 'number' ? loopingSentenceIdx : transcriptData.findIndex(item => item.seconds > currentTime))}
-                          className="p-2 text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform"
-                        >
-                          <ChevronRight size={24} />
-                        </button>
-                      </div>
-
-                      {/* Right: Volume */}
-                      <div className="w-12 flex justify-end">
-                        <button onClick={() => setVolume(volume === 0 ? 1 : 0)} className="text-slate-400 hover:text-indigo-600">
-                          {volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                        </button>
-                      </div>
-
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom: Transcript List */}
-            <div className="flex-1 w-full overflow-y-auto bg-[#F8FAFC]">
+          <div className="flex flex-col h-full">
+            <div className="flex-1 w-full overflow-y-auto bg-[#F8FAFC]" onClick={() => setShowSpeedMenu(false)}>
               <div className="max-w-6xl mx-auto p-4 md:p-6 pb-32">
                 {isAnalyzing ? (
                   <div className="flex flex-col items-center justify-center py-20 space-y-6">
@@ -1315,7 +1269,127 @@ const App = () => {
                 )}
               </div>
             </div>
-          </>
+
+            {/* 2. Bottom Player Controls (Sticky Bottom) */}
+            <div className="flex-none bg-white border-t border-slate-200 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
+              <div className="max-w-3xl mx-auto">
+                <div className="flex flex-row h-[80px] items-stretch">
+                  {/* Video (Square, Left) */}
+                  <div className="relative bg-black h-full aspect-square flex-shrink-0 border-r border-slate-100 group">
+                    <video
+                      ref={videoRef}
+                      src={mediaUrl}
+                      className="w-full h-full object-contain"
+                      onClick={togglePlay}
+                      playsInline
+                      loop
+                    />
+                    {!isPlaying && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                        <Play size={24} fill="white" className="text-white ml-0.5" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Controls (Right, Flex Column) */}
+                  <div className="flex-1 px-4 py-2 flex flex-col justify-center gap-1.5 min-w-0 bg-white relative">
+
+                    {/* Row 1: Time & Progress */}
+                    <div className="flex items-center gap-3 text-[11px] font-mono font-bold text-slate-500">
+                      <span className="w-10 shrink-0">{new Date(currentTime * 1000).toISOString().substr(14, 5)}</span>
+
+                      <div
+                        className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden cursor-pointer group relative"
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          seekTo(((e.clientX - rect.left) / rect.width) * videoRef.current.duration);
+                        }}
+                      >
+                        <div className="absolute inset-0 w-full h-full hover:bg-slate-200/50 transition-colors" />
+                        <div
+                          className="h-full bg-indigo-500 rounded-full relative group-hover:bg-indigo-600 transition-colors"
+                          style={{ width: `${videoRef.current?.duration ? (currentTime / videoRef.current.duration) * 100 : 0}%` }}
+                        />
+                      </div>
+
+                      <span className="w-10 shrink-0 text-right">{videoRef.current?.duration ? new Date(videoRef.current.duration * 1000).toISOString().substr(14, 5) : "00:00"}</span>
+                    </div>
+
+                    {/* Row 2: Main Buttons (Centered) */}
+                    <div className="flex items-center justify-between mt-0.5 relative">
+
+                      {/* Left: Speed Menu Popup */}
+                      <div className="relative">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowSpeedMenu(!showSpeedMenu); }}
+                          className="flex items-center justify-center gap-2 px-6 py-2 bg-slate-100 rounded-xl text-base font-bold text-slate-700 hover:bg-slate-200 transition-all min-w-[120px]"
+                        >
+                          {playbackRate.toFixed(1)}x
+                        </button>
+
+                        {showSpeedMenu && (
+                          <div className="absolute bottom-full left-0 mb-3 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-[60] animate-in zoom-in-95 duration-200 min-w-[200px]">
+                            <div className="grid grid-cols-4 gap-1">
+                              {[0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0].map(rate => (
+                                <button
+                                  key={rate}
+                                  onClick={(e) => { e.stopPropagation(); setPlaybackRate(rate); setShowSpeedMenu(false); }}
+                                  className={`px-1 py-2 text-center rounded-lg text-sm font-bold transition-colors ${Math.abs(playbackRate - rate) < 0.01 ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                                >
+                                  {rate.toFixed(1)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Center: Prev - Play - Next */}
+                      <div className="flex items-center gap-6">
+                        <button
+                          onClick={() => handlePrev(typeof loopingSentenceIdx === 'number' ? loopingSentenceIdx : transcriptData.findIndex(item => item.seconds > currentTime))}
+                          className="p-2 text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform"
+                        >
+                          <ChevronLeft size={32} />
+                        </button>
+
+                        <button
+                          onClick={togglePlay}
+                          className="w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-95 transition-all"
+                        >
+                          {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" className="ml-1" />}
+                        </button>
+
+                        <button
+                          onClick={() => handleNext(typeof loopingSentenceIdx === 'number' ? loopingSentenceIdx : transcriptData.findIndex(item => item.seconds > currentTime))}
+                          className="p-2 text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform"
+                        >
+                          <ChevronRight size={32} />
+                        </button>
+                      </div>
+
+                      {/* Right: Volume */}
+                      <div className="flex items-center gap-3 pr-4">
+                        <button onClick={() => setVolume(volume === 0 ? 1 : 0)} className="text-slate-400 hover:text-indigo-600 transition-colors">
+                          {volume === 0 ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                        </button>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.05"
+                          value={volume}
+                          onChange={(e) => setVolume(parseFloat(e.target.value))}
+                          className="w-32 sm:w-48 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                        />
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="flex items-center justify-center h-full text-slate-400">Select a file to view</div>
         )}
