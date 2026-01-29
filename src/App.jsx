@@ -34,7 +34,7 @@ const generateHTML = (data, filename, mediaDataUrl) => {
 <body class="font-sans h-screen flex flex-col overflow-hidden">
     
     <!-- Header -->
-    <header class="h-16 flex-none bg-white border-b border-slate-200 flex items-center justify-between px-6 z-20 shadow-sm relative">
+    <header class="h-12 flex-none bg-white border-b border-slate-200 flex items-center justify-between px-4 z-20 shadow-sm relative">
         <div class="flex items-center gap-3">
             <div class="bg-indigo-600 text-white p-1.5 rounded-lg">
                 <i data-lucide="volume-2" class="w-5 h-5"></i>
@@ -53,9 +53,9 @@ const generateHTML = (data, filename, mediaDataUrl) => {
     <div class="flex-1 flex flex-col overflow-hidden relative">
 
         <!-- Top: Player Section (Sticky) -->
-        <div class="flex-none bg-[#F8FAFC] z-10 p-2 sm:p-4 pb-0">
+        <div class="flex-none bg-[#F8FAFC] z-10 p-1 sm:p-2 pb-0">
             <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="flex flex-row h-28 sm:h-auto md:h-auto items-stretch">
+                <div class="flex flex-row h-20 sm:h-auto md:h-auto items-stretch">
                     <!-- Video -->
                     <div class="relative bg-black w-[120px] sm:w-[180px] md:w-1/2 flex-shrink-0 border-r border-slate-100">
                         <video id="main-video" class="absolute inset-0 w-full h-full object-contain" src="${mediaDataUrl}" playsinline loop></video>
@@ -167,14 +167,14 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                         list.innerHTML = transcriptData.map((item, i) => {
                             var patternsHtml = '';
                             if(item.patterns && item.patterns.length > 0) {
-                                patternsHtml = '<div class="mt-4">' +
-                                    '<div class="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-wider mb-2">' +
+                                patternsHtml = '<div class="mt-3">' +
+                                    '<div class="flex items-center gap-2 text-amber-600 font-bold text-sm uppercase tracking-wider mb-2">' +
                                         '<i data-lucide="list" class="w-3 h-3"></i> Patterns' +
                                     '</div>' +
                                     '<div class="space-y-2">' + item.patterns.map(p => 
                                         '<div class="bg-amber-50/50 p-3 rounded-xl border border-amber-100/50">' +
-                                            '<span class="font-bold text-slate-800 text-sm block mb-1">' + p.term + '</span>' +
-                                            '<span class="text-slate-600 text-xs block">' + p.definition + '</span>' +
+                                            '<span class="font-bold text-slate-800 text-base block mb-0.5">' + p.term + '</span>' +
+                                            '<span class="text-slate-600 text-sm block">' + p.definition + '</span>' +
                                         '</div>'
                                     ).join('') + '</div>' +
                                 '</div>';
@@ -182,16 +182,16 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                             
                             var wordsHtml = '';
                             if(item.words && item.words.length > 0) {
-                                wordsHtml = '<div class="mt-4">' +
-                                    '<div class="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-wider mb-2">' +
+                                wordsHtml = '<div class="mt-3">' +
+                                    '<div class="flex items-center gap-2 text-emerald-600 font-bold text-sm uppercase tracking-wider mb-2">' +
                                         '<i data-lucide="book-open" class="w-3 h-3"></i> Words' +
                                     '</div>' +
                                     '<div class="divide-y divide-emerald-100/50 border border-emerald-100/30 rounded-xl overflow-hidden bg-white">' +
                                         item.words.map(w => 
                                             '<div class="p-2.5 flex items-start gap-3 hover:bg-emerald-50/30">' +
-                                                '<span class="font-bold text-emerald-700 text-sm min-w-[30%]">' + w.word + '</span>' +
+                                                '<span class="font-bold text-emerald-700 text-base min-w-[30%]">' + w.word + '</span>' +
                                                 '<div class="flex-1">' +
-                                                    '<span class="block text-slate-700 text-xs font-medium">' + w.meaning + '</span>' +
+                                                    '<span class="block text-slate-700 text-sm font-medium">' + w.meaning + '</span>' +
                                                     (w.func ? '<span class="block text-slate-400 text-[10px]">' + w.func + '</span>' : '') +
                                                 '</div>' +
                                             '</div>'
@@ -202,8 +202,8 @@ const generateHTML = (data, filename, mediaDataUrl) => {
 
                             var translationHtml = item.translation ? 
                                 '<div class="bg-indigo-50/80 rounded-xl p-4 border border-indigo-100 mb-6">' +
-                                    '<div class="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase tracking-wider mb-2"><i data-lucide="languages" class="w-3 h-3"></i> Translation</div>' +
-                                    '<p class="text-slate-700 text-sm leading-relaxed whitespace-pre-line font-medium">' + item.translation + '</p>' +
+                                    '<div class="flex items-center gap-2 text-indigo-600 font-bold text-sm uppercase tracking-wider mb-2"><i data-lucide="languages" class="w-3 h-3"></i> Translation</div>' +
+                                    '<p class="text-slate-700 text-base leading-relaxed whitespace-pre-line font-medium">' + item.translation + '</p>' +
                                 '</div>' : '';
 
                             // Check initial state
@@ -216,11 +216,11 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                             var toggleIcon = isOpen ? 'chevron-up' : 'chevron-down';
                             var toggleColor = isOpen ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50';
 
-                            return '<div id="item-' + i + '" class="group relative bg-white/80 border border-slate-100 rounded-2xl mb-6 transition-all duration-300 p-5 sm:p-6 opacity-60 hover:opacity-100 hover:bg-white hover:shadow-lg">' +
+                            return '<div id="item-' + i + '" class="group relative bg-white/80 border border-slate-100 rounded-2xl mb-3 transition-all duration-300 p-3 sm:p-4 opacity-60 hover:opacity-100 hover:bg-white hover:shadow-lg">' +
                                 '<div class="absolute left-0 top-6 bottom-6 w-1 rounded-r-full bg-transparent transition-all active-indicator"></div>' +
-                                '<div class="flex flex-wrap items-center justify-between gap-3 mb-4">' +
+                                '<div class="flex flex-wrap items-center justify-between gap-3 mb-2">' +
                                     '<div class="flex items-center gap-3">' +
-                                        '<button onclick="seekTo(' + item.seconds + ')" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold font-mono bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all timestamp-btn">' +
+                                        '<button onclick="seekTo(' + item.seconds + ')" class="flex items-center gap-2 px-2 py-1 rounded-full text-sm font-bold font-mono bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all timestamp-btn">' +
                                             '<i data-lucide="play" class="w-3 h-3 fill-current"></i> ' + item.timestamp +
                                         '</button>' +
                                          // Individual Toggle Button
@@ -235,7 +235,7 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                                          '<button onclick="handleNext(' + i + ')" class="p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>' +
                                     '</div>' +
                                 '</div>' +
-                                '<div onclick="jumpTo(' + i + ')" class="text-xl font-bold leading-relaxed cursor-pointer text-slate-500 hover:text-slate-900 mb-2 main-text transition-colors">' + item.text + '</div>' +
+                                '<div onclick="jumpTo(' + i + ')" class="text-2xl font-bold leading-relaxed cursor-pointer text-slate-500 hover:text-slate-900 mb-2 main-text transition-colors">' + item.text + '</div>' +
                                 '<div id="analysis-' + i + '" class="analysis-section overflow-hidden transition-all duration-500 ease-in-out border-slate-100" style="' + analysisStyle + '">' +
                                     translationHtml +
                                     '<div class="grid md:grid-cols-2 gap-6">' +
@@ -594,7 +594,7 @@ const TranscriptItem = ({
     <div
       ref={itemRef}
       className={`
-        group relative transition-all duration-300 ease-out rounded-2xl border mb-6
+        group relative transition-all duration-300 ease-out rounded-2xl border mb-3
         ${isActive
           ? 'bg-white border-indigo-200 shadow-xl shadow-indigo-100/50 ring-1 ring-indigo-500/20'
           : 'bg-white/80 border-slate-100 hover:border-indigo-100 hover:shadow-lg hover:shadow-slate-100/50 hover:bg-white'}
@@ -603,13 +603,13 @@ const TranscriptItem = ({
       {/* Active Indicator */}
       <div className={`absolute left-0 top-6 bottom-6 w-1 rounded-r-full transition-all duration-300 ${isActive ? 'bg-indigo-500' : 'bg-transparent group-hover:bg-indigo-200'}`} />
 
-      <div className="p-5 sm:p-6">
+      <div className="p-3 sm:p-4">
         {/* Header: Timestamp & Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
           <button
             onClick={() => seekTo(item.seconds)}
             className={`
-              flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold font-mono tracking-wide transition-all
+              flex items-center gap-2 px-2 py-1 rounded-full text-sm font-bold font-mono tracking-wide transition-all
               ${isActive
                 ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
                 : 'bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}
@@ -660,7 +660,7 @@ const TranscriptItem = ({
         <div
           onClick={() => jumpToSentence(idx)}
           className={`
-            text-lg sm:text-xl md:text-2xl font-bold leading-relaxed cursor-pointer transition-colors duration-200 mb-2
+            text-2xl sm:text-3xl md:text-4xl font-bold leading-relaxed cursor-pointer transition-colors duration-200 mb-2
             ${isActive ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}
           `}
         >
@@ -688,10 +688,10 @@ const TranscriptItem = ({
           {/* Translation (Replaces Explanation) */}
           {item.translation && (
             <div className="bg-indigo-50/80 rounded-xl p-4 border border-indigo-100 mb-6">
-              <div className="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase tracking-wider mb-2">
+              <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm uppercase tracking-wider mb-2">
                 <Languages size={14} /> Translation
               </div>
-              <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-line font-medium">{item.translation}</p>
+              <p className="text-slate-700 text-base leading-relaxed whitespace-pre-line font-medium">{item.translation}</p>
             </div>
           )}
 
@@ -699,14 +699,14 @@ const TranscriptItem = ({
             {/* Patterns */}
             {item.patterns && item.patterns.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-wider mb-3">
+                <div className="flex items-center gap-2 text-amber-600 font-bold text-sm uppercase tracking-wider mb-3">
                   <List size={14} /> Patterns & Nuances
                 </div>
                 <div className="space-y-2">
                   {item.patterns.map((pat, pi) => (
                     <div key={pi} className="bg-amber-50/50 p-3 rounded-xl border border-amber-100/50">
-                      <span className="font-bold text-slate-800 text-sm block mb-1">{pat.term}</span>
-                      <span className="text-slate-600 text-xs leading-relaxed block">{pat.definition}</span>
+                      <span className="font-bold text-slate-800 text-base block mb-0.5">{pat.term}</span>
+                      <span className="text-slate-600 text-sm leading-relaxed block">{pat.definition}</span>
                     </div>
                   ))}
                 </div>
@@ -716,16 +716,16 @@ const TranscriptItem = ({
             {/* Word Analysis */}
             {item.words && item.words.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-wider mb-3">
+                <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm uppercase tracking-wider mb-3">
                   <BookOpen size={14} /> Word Analysis
                 </div>
                 <div className="divide-y divide-emerald-100/50 border border-emerald-100/30 rounded-xl overflow-hidden bg-white">
                   {item.words.map((w, wi) => (
                     <div key={wi} className="p-2.5 flex items-start gap-3 hover:bg-emerald-50/30 transition-colors">
-                      <span className="font-bold text-emerald-700 text-sm min-w-[30%] break-words">{w.word}</span>
+                      <span className="font-bold text-emerald-700 text-base min-w-[30%] break-words">{w.word}</span>
                       <div className="flex-1">
-                        <span className="block text-slate-700 text-xs font-medium">{w.meaning}</span>
-                        {w.func && <span className="block text-slate-400 text-[10px] mt-0.5">{w.func}</span>}
+                        <span className="block text-slate-700 text-sm font-medium">{w.meaning}</span>
+                        {w.func && <span className="block text-slate-400 text-xs mt-0.5">{w.func}</span>}
                       </div>
                     </div>
                   ))}
