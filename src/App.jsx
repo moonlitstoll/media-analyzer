@@ -53,45 +53,53 @@ const generateHTML = (data, filename, mediaDataUrl) => {
     <div class="flex-1 flex flex-col overflow-hidden relative">
 
         <!-- Top: Player Section (Sticky) -->
-        <div class="flex-none bg-[#F8FAFC] z-10 p-1 sm:p-2 pb-0">
-            <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="flex flex-row h-20 sm:h-auto md:h-auto items-stretch">
-                    <!-- Video -->
-                    <div class="relative bg-black w-[120px] sm:w-[180px] md:w-1/2 flex-shrink-0 border-r border-slate-100">
+        <!-- Top: Player Section (Sticky) -->
+        <div class="flex-none bg-white z-10 border-b border-slate-200">
+            <div class="max-w-3xl mx-auto">
+                <div class="flex flex-row h-[72px] items-stretch">
+                    <!-- Video (Square, Left) -->
+                    <div class="relative bg-black h-full aspect-square flex-shrink-0 border-r border-slate-100">
                         <video id="main-video" class="absolute inset-0 w-full h-full object-contain" src="${mediaDataUrl}" playsinline loop></video>
                     </div>
 
-                    <!-- Controls -->
-                    <div class="flex-1 p-2 sm:p-4 flex flex-col justify-center relative min-w-0">
-                         <!-- Progress -->
-                         <div class="mb-2 sm:mb-4">
-                            <div class="flex justify-between text-[10px] font-mono font-medium text-slate-400 mb-1">
-                                <span id="current-time">00:00</span>
-                                <span id="duration">00:00</span>
-                            </div>
-                            <div id="progress-container" class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden cursor-pointer relative group">
+                    <!-- Controls (Right, Flex Column) -->
+                    <div class="flex-1 px-4 py-2 flex flex-col justify-center gap-1 min-w-0 bg-white">
+                         <!-- Row 1: Time & Progress -->
+                         <div class="flex items-center gap-3 text-[10px] font-mono font-medium text-slate-400">
+                            <span id="current-time" class="w-8">00:00</span>
+                            
+                            <div id="progress-container" class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden cursor-pointer relative group">
                                 <div class="absolute inset-0 w-full h-full hover:bg-slate-200/50 transition-colors"></div>
                                 <div id="progress-bar" class="h-full bg-indigo-500 rounded-full relative group-hover:bg-indigo-600 transition-colors" style="width: 0%"></div>
                             </div>
+
+                            <span id="duration" class="w-8 text-right">00:00</span>
                          </div>
 
-                         <!-- Buttons -->
-                         <div class="flex items-center justify-between gap-1 sm:gap-4">
-                             <div class="flex items-center gap-1 sm:gap-2">
-                                 <button id="mute-btn" class="hidden sm:flex p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"><i data-lucide="volume-2" class="w-4 h-4 sm:w-5 sm:h-5"></i></button>
+                         <!-- Row 2: Main Buttons (Centered) -->
+                         <div class="flex items-center justify-between mt-1">
+                             <!-- Left Spacer / Speed -->
+                             <div class="w-12 flex justify-start">
+                                 <div class="flex items-center gap-1 opacity-50 hover:opacity-100 transition-opacity">
+                                    <span id="speed-display" class="text-[10px] font-bold text-slate-600">1.0x</span>
+                                    <input type="range" id="speed-slider" min="0.5" max="2.0" step="0.1" value="1.0" class="w-8 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                                 </div>
                              </div>
 
-                             <div class="flex items-center gap-2 sm:gap-3">
-                                 <button id="prev-btn" class="p-1.5 sm:p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors active:scale-95"><i data-lucide="chevron-left" class="w-5 h-5 sm:w-6 sm:h-6"></i></button>
-                                 <button id="play-btn" class="w-8 h-8 sm:w-12 sm:h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-95 transition-all">
-                                     <i data-lucide="play" class="w-4 h-4 sm:w-6 sm:h-6 ml-0.5"></i>
+                             <!-- Center: Prev - Play - Next -->
+                             <div class="flex items-center gap-4">
+                                 <button id="prev-btn" class="p-2 text-slate-400 hover:text-indigo-600 active:scale-95 transition-transform"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
+                                 
+                                 <button id="play-btn" class="w-8 h-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-md shadow-indigo-500/30 active:scale-95 transition-all">
+                                     <i data-lucide="play" class="w-4 h-4 ml-0.5"></i>
                                  </button>
-                                 <button id="next-btn" class="p-1.5 sm:p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors active:scale-95"><i data-lucide="chevron-right" class="w-5 h-5 sm:w-6 sm:h-6"></i></button>
+                                 
+                                 <button id="next-btn" class="p-2 text-slate-400 hover:text-indigo-600 active:scale-95 transition-transform"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
                              </div>
 
-                             <div class="flex items-center gap-1 bg-slate-50 px-1.5 py-1 rounded-lg border border-slate-100 scale-90 sm:scale-100 origin-right">
-                                 <input type="range" id="speed-slider" min="0.5" max="2.0" step="0.1" value="1.0" class="w-12 sm:w-16 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-500">
-                                 <span id="speed-display" class="hidden sm:inline text-[10px] font-bold text-slate-600 w-6 text-right">1.0x</span>
+                             <!-- Right Spacer / Volume (Hidden on small) -->
+                             <div class="w-12 flex justify-end">
+                                 <button id="mute-btn" class="p-1 text-slate-400 hover:text-indigo-600"><i data-lucide="volume-2" class="w-4 h-4"></i></button>
                              </div>
                          </div>
                     </div>
@@ -1140,80 +1148,93 @@ const App = () => {
         {/* Active File Content */}
         {activeFile ? (
           <>
-            {/* Top: Video Player & Controls */}
-            <div className="flex-none bg-slate-100 border-b border-slate-200 z-10 shadow-lg">
-              <div className="max-w-6xl mx-auto p-4 flex flex-col md:flex-row gap-6 items-center">
-                {/* Video - Smaller Size (w-1/3) */}
-                <div className="relative group rounded-xl overflow-hidden shadow-2xl bg-black ring-1 ring-slate-900/10 aspect-video w-full md:w-1/3 max-w-sm flex-shrink-0">
-                  <video
-                    ref={videoRef}
-                    src={mediaUrl}
-                    className="w-full h-full object-contain"
-                    onClick={togglePlay}
-                    playsInline
-                    loop
-                  />
-                  {!isPlaying && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-                      <div className="bg-white/20 backdrop-blur-md p-3 rounded-full shadow-lg">
-                        <Play size={24} fill="white" className="text-white ml-1" />
+            {/* Top: Video Player & Controls (Sticky Redesign) */}
+            <div className="flex-none bg-white border-b border-slate-200 z-10 shadow-sm sticky top-0">
+              <div className="max-w-3xl mx-auto">
+                <div className="flex flex-row h-[72px] items-stretch">
+                  {/* Video (Square, Left) */}
+                  <div className="relative bg-black h-full aspect-square flex-shrink-0 border-r border-slate-100 group">
+                    <video
+                      ref={videoRef}
+                      src={mediaUrl}
+                      className="w-full h-full object-contain"
+                      onClick={togglePlay}
+                      playsInline
+                      loop
+                    />
+                    {!isPlaying && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                        <Play size={20} fill="white" className="text-white ml-0.5" />
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Controls */}
-                <div className="flex-1 w-full bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-3">
-                  {/* Progress Bar & Time */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[10px] font-mono font-medium text-slate-400">
-                      <span>{new Date(currentTime * 1000).toISOString().substr(14, 5)}</span>
-                      <span>{videoRef.current?.duration ? new Date(videoRef.current.duration * 1000).toISOString().substr(14, 5) : "00:00"}</span>
-                    </div>
-                    <div
-                      className="w-full h-2 bg-slate-100 rounded-full overflow-hidden cursor-pointer group relative"
-                      onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        seekTo(((e.clientX - rect.left) / rect.width) * videoRef.current.duration);
-                      }}
-                    >
-                      <div className="absolute inset-0 w-full h-full hover:bg-slate-200/50 transition-colors" />
-                      <div
-                        className="h-full bg-indigo-500 rounded-full relative group-hover:bg-indigo-600 transition-colors"
-                        style={{ width: `${videoRef.current?.duration ? (currentTime / videoRef.current.duration) * 100 : 0}%` }}
-                      />
-                    </div>
+                    )}
                   </div>
 
-                  {/* Main Buttons */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => setVolume(volume === 0 ? 1 : 0)} className="text-slate-400 hover:text-indigo-600">
-                        {volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
-                      </button>
-                      <input type="range" min="0" max="1" step="0.1" value={volume} onChange={(e) => setVolume(parseFloat(e.target.value))} className="w-20 accent-indigo-500 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer hidden sm:block" />
+                  {/* Controls (Right, Flex Column, Compact) */}
+                  <div className="flex-1 px-4 py-2 flex flex-col justify-center gap-1 min-w-0 bg-white">
+
+                    {/* Row 1: Time & Progress */}
+                    <div className="flex items-center gap-3 text-[10px] font-mono font-medium text-slate-400">
+                      <span className="w-8 shrink-0">{new Date(currentTime * 1000).toISOString().substr(14, 5)}</span>
+
+                      <div
+                        className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden cursor-pointer group relative"
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          seekTo(((e.clientX - rect.left) / rect.width) * videoRef.current.duration);
+                        }}
+                      >
+                        <div className="absolute inset-0 w-full h-full hover:bg-slate-200/50 transition-colors" />
+                        <div
+                          className="h-full bg-indigo-500 rounded-full relative group-hover:bg-indigo-600 transition-colors"
+                          style={{ width: `${videoRef.current?.duration ? (currentTime / videoRef.current.duration) * 100 : 0}%` }}
+                        />
+                      </div>
+
+                      <span className="w-8 shrink-0 text-right">{videoRef.current?.duration ? new Date(videoRef.current.duration * 1000).toISOString().substr(14, 5) : "00:00"}</span>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      {/* Prev Sentence Button */}
-                      <button onClick={() => handlePrev(typeof loopingSentenceIdx === 'number' ? loopingSentenceIdx : transcriptData.findIndex(item => item.seconds > currentTime))} className="text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform">
-                        <ChevronLeft size={24} />
-                      </button>
+                    {/* Row 2: Main Buttons (Centered) */}
+                    <div className="flex items-center justify-between mt-1">
 
-                      <button onClick={togglePlay} className="w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-95 transition-all">
-                        {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" className="ml-1" />}
-                      </button>
+                      {/* Left: Speed */}
+                      <div className="w-12 flex justify-start">
+                        <div className="flex items-center gap-1 opacity-50 hover:opacity-100 transition-opacity">
+                          <span className="text-[10px] font-bold text-slate-600 w-6 text-center">{playbackRate.toFixed(1)}x</span>
+                          <input type="range" min="0.5" max="2.0" step="0.1" value={playbackRate} onChange={(e) => setPlaybackRate(parseFloat(e.target.value))} className="w-8 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-500" />
+                        </div>
+                      </div>
 
-                      {/* Next Sentence Button */}
-                      <button onClick={() => handleNext(typeof loopingSentenceIdx === 'number' ? loopingSentenceIdx : transcriptData.findIndex(item => item.seconds > currentTime))} className="text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform">
-                        <ChevronRight size={24} />
-                      </button>
-                    </div>
+                      {/* Center: Prev - Play - Next */}
+                      <div className="flex items-center gap-4">
+                        <button
+                          onClick={() => handlePrev(typeof loopingSentenceIdx === 'number' ? loopingSentenceIdx : transcriptData.findIndex(item => item.seconds > currentTime))}
+                          className="p-2 text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform"
+                        >
+                          <ChevronLeft size={24} />
+                        </button>
 
-                    <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                      <Gauge size={16} className="text-slate-400" />
-                      <input type="range" min="0.5" max="2.0" step="0.1" value={playbackRate} onChange={(e) => setPlaybackRate(parseFloat(e.target.value))} className="w-16 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-500" />
-                      <span className="text-xs font-bold text-slate-600 w-8 text-right">{playbackRate.toFixed(1)}x</span>
+                        <button
+                          onClick={togglePlay}
+                          className="w-10 h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-md shadow-indigo-500/30 active:scale-95 transition-all"
+                        >
+                          {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
+                        </button>
+
+                        <button
+                          onClick={() => handleNext(typeof loopingSentenceIdx === 'number' ? loopingSentenceIdx : transcriptData.findIndex(item => item.seconds > currentTime))}
+                          className="p-2 text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform"
+                        >
+                          <ChevronRight size={24} />
+                        </button>
+                      </div>
+
+                      {/* Right: Volume */}
+                      <div className="w-12 flex justify-end">
+                        <button onClick={() => setVolume(volume === 0 ? 1 : 0)} className="text-slate-400 hover:text-indigo-600">
+                          {volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                        </button>
+                      </div>
+
                     </div>
                   </div>
                 </div>
