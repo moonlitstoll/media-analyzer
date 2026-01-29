@@ -252,7 +252,7 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                                          '<button onclick="handleNext(' + i + ')" class="p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>' +
                                     '</div>' +
                                 '</div>' +
-                                '<div onclick="jumpTo(' + i + ')" class="text-2xl font-bold leading-relaxed cursor-pointer text-slate-500 hover:text-slate-900 mb-2 main-text transition-colors">' + item.text + '</div>' +
+                                '<div onclick="jumpTo(' + i + ')" class="text-xl sm:text-2xl md:text-3xl font-bold leading-relaxed cursor-pointer text-slate-500 hover:text-slate-900 mb-2 main-text transition-colors">' + item.text + '</div>' +
                                 '<div id="analysis-' + i + '" class="analysis-section overflow-hidden transition-all duration-500 ease-in-out border-slate-100" style="' + analysisStyle + '">' +
                                     translationHtml +
                                     '<div class="grid md:grid-cols-2 gap-6">' +
@@ -701,7 +701,7 @@ const TranscriptItem = ({
         <div
           onClick={() => jumpToSentence(idx)}
           className={`
-            text-lg sm:text-xl md:text-2xl font-bold leading-relaxed cursor-pointer transition-colors duration-200 mb-2 px-1
+            text-xl sm:text-2xl md:text-3xl font-bold leading-relaxed cursor-pointer transition-colors duration-200 mb-2 px-1
             ${isActive ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}
           `}
         >
