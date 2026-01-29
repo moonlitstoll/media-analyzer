@@ -1139,7 +1139,7 @@ const App = () => {
 
         {showSettings && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md animate-in zoom-in duration-300">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl animate-in zoom-in duration-300">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-slate-900">Settings</h3>
                 <button onClick={() => setShowSettings(false)}><X size={20} className="text-slate-400" /></button>
@@ -1164,14 +1164,21 @@ const App = () => {
                       cacheKeys.map(key => {
                         const name = key.replace('gemini_analysis_', '').replace(/_\d+$/, '');
                         return (
-                          <div key={key} className="flex items-center justify-between bg-white border border-slate-200 p-2 rounded-lg shadow-sm">
-                            <span className="text-xs font-medium text-slate-600 truncate max-w-[150px]" title={key}>{name}</span>
-                            <div className="flex items-center gap-1">
-                              <button onClick={() => loadCache(key)} className="text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 p-1.5 rounded transition-colors" title="Load Cached Data">
-                                <Download size={14} />
+                          <div key={key} className="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-xl shadow-sm hover:border-indigo-200 transition-colors group/item">
+                            <span className="text-sm font-medium text-slate-700 truncate flex-1 mr-4" title={key}>{name}</span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => loadCache(key)}
+                                className="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg text-xs font-bold transition-all"
+                              >
+                                불러오기
                               </button>
-                              <button onClick={() => deleteCache(key)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors" title="Delete">
-                                <Trash2 size={14} />
+                              <button
+                                onClick={() => deleteCache(key)}
+                                className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                title="Delete"
+                              >
+                                <Trash2 size={16} />
                               </button>
                             </div>
                           </div>
