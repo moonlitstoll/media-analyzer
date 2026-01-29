@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Play, Pause, Rewind, FastForward,
   Eye, EyeOff, Languages, List, Search, Upload,
@@ -812,6 +812,14 @@ const App = () => {
   const mediaUrl = activeFile?.url || null;
   const isAnalyzing = activeFile?.isAnalyzing || false;
 
+  // Derived current sentence index
+  const currentSentenceIdx = useMemo(() => {
+    if (!transcriptData || transcriptData.length === 0) return -1;
+    return transcriptData.findIndex((item, idx) =>
+      currentTime >= item.seconds && (idx === transcriptData.length - 1 || currentTime < transcriptData[idx + 1].seconds)
+    );
+  }, [transcriptData, currentTime]);
+
   // Sync ref
   useEffect(() => { loopingSentenceIdxRef.current = loopingSentenceIdx; }, [loopingSentenceIdx]);
 
@@ -1246,7 +1254,7 @@ const App = () => {
                 ) : (
                   <div className="space-y-4">
                     {transcriptData.map((item, idx) => {
-                      const isActive = (currentTime >= item.seconds && (idx === transcriptData.length - 1 || currentTime < transcriptData[idx + 1].seconds));
+                      const isActive = idx === currentSentenceIdx;
                       return (
                         <TranscriptItem
                           key={idx}
@@ -1347,7 +1355,7 @@ const App = () => {
                       {/* Center: Prev - Play - Next */}
                       <div className="flex items-center gap-6">
                         <button
-                          onClick={() => handlePrev(typeof loopingSentenceIdx === 'number' ? loopingSentenceIdx : transcriptData.findIndex(item => item.seconds > currentTime))}
+                          onClick={() => handlePrev(currentSentenceIdx !== -1 ? currentSentenceIdx : 0)}
                           className="p-2 text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform"
                         >
                           <ChevronLeft size={32} />
@@ -1361,7 +1369,7 @@ const App = () => {
                         </button>
 
                         <button
-                          onClick={() => handleNext(typeof loopingSentenceIdx === 'number' ? loopingSentenceIdx : transcriptData.findIndex(item => item.seconds > currentTime))}
+                          onClick={() => handleNext(currentSentenceIdx !== -1 ? currentSentenceIdx : 0)}
                           className="p-2 text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform"
                         >
                           <ChevronRight size={32} />
