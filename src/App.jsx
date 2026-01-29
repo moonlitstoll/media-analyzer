@@ -407,6 +407,17 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                             const pos = (e.clientX - rect.left) / rect.width;
                             video.currentTime = pos * video.duration;
                         };
+
+                        video.addEventListener('ended', () => {
+                            if (loopingIdx !== null) {
+                                const start = transcriptData[loopingIdx].seconds;
+                                video.currentTime = Math.max(0, start - 1.0);
+                                video.play();
+                            } else {
+                                video.currentTime = 0;
+                                video.play();
+                            }
+                        });
                     }
 
                     if(prevBtn) prevBtn.onclick = () => {
@@ -452,9 +463,12 @@ const generateHTML = (data, filename, mediaDataUrl) => {
 
                     window.toggleLoop = (i) => {
                         if (!video || !transcriptData[i]) return;
-                        if(loopingIdx === i) loopingIdx = null;
-                        else {
+                        if(loopingIdx === i) {
+                            loopingIdx = null;
+                            video.loop = true;
+                        } else {
                             loopingIdx = i;
+                            video.loop = false;
                             video.currentTime = Math.max(0, transcriptData[i].seconds - 1.0);
                             video.play();
                         }
@@ -925,12 +939,16 @@ const App = () => {
   }, []);
 
   const toggleLoop = useCallback((index) => {
-    if (loopingSentenceIdx === index) {
-      setLoopingSentenceIdx(null);
-    } else {
-      setLoopingSentenceIdx(index);
+    setLoopingSentenceIdx(prev => {
+      const next = prev === index ? null : index;
+      if (videoRef.current) {
+        videoRef.current.loop = next === null;
+      }
+      return next;
+    });
+
+    if (loopingSentenceIdx !== index) {
       if (activeFile?.data?.[index]) {
-        // Adjusted offset to -1.0s
         seekTo(Math.max(0, activeFile.data[index].seconds - 1.0));
       }
     }
@@ -963,8 +981,8 @@ const App = () => {
     const v = videoRef.current;
     if (!v || !activeFile?.data) return;
 
-    // Auto loop the whole video
-    v.loop = true;
+    // Auto loop the whole video only if no sentence is being looped
+    v.loop = loopingSentenceIdxRef.current === null;
 
     const update = () => {
       const now = v.currentTime;
@@ -986,10 +1004,27 @@ const App = () => {
     v.addEventListener('timeupdate', update);
     v.addEventListener('play', () => setIsPlaying(true));
     v.addEventListener('pause', () => setIsPlaying(false));
+    v.addEventListener('ended', () => {
+      // Handle the case where the video ends and we need to loop manually if native loop was off
+      if (loopingSentenceIdxRef.current !== null) {
+        const activeIdx = loopingSentenceIdxRef.current;
+        const data = activeFile.data;
+        if (data[activeIdx]) {
+          v.currentTime = Math.max(0, data[activeIdx].seconds - 1.0);
+          v.play();
+        }
+      } else {
+        // Global loop if native loop was off for some reason
+        v.currentTime = 0;
+        v.play();
+      }
+    });
+
     return () => {
       v.removeEventListener('timeupdate', update);
       v.removeEventListener('play', null);
       v.removeEventListener('pause', null);
+      v.removeEventListener('ended', null);
     };
   }, [mediaUrl, activeFile]);
 
