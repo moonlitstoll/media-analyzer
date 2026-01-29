@@ -690,7 +690,7 @@ const TranscriptItem = ({
         <div
           onClick={() => jumpToSentence(idx)}
           className={`
-            text-2xl sm:text-3xl md:text-4xl font-bold leading-relaxed cursor-pointer transition-colors duration-200 mb-2
+            text-lg sm:text-xl md:text-2xl font-bold leading-relaxed cursor-pointer transition-colors duration-200 mb-2 px-1
             ${isActive ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}
           `}
         >
@@ -706,37 +706,37 @@ const TranscriptItem = ({
             onClick={(e) => { e.stopPropagation(); toggleGlobalAnalysis(); }}
             className="flex items-center gap-1 text-xs font-bold text-indigo-500 hover:text-indigo-700 uppercase tracking-wider px-2 py-1 hover:bg-indigo-50 rounded-lg transition-colors"
           >
-            {showAnalysis ? 'Hide Analysis' : 'Show Analysis'}
+            {showAnalysis ? 'Hide' : 'Show'}
             {showAnalysis ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
         </div>
 
         {/* Detailed Analysis Section */}
-        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${showAnalysis ? 'max-h-[2000px] opacity-100 mt-4 pt-4 border-t border-slate-100' : 'max-h-0 opacity-0 mt-0 pt-0'}`}>
+        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${showAnalysis ? 'max-h-[2000px] opacity-100 mt-2 pt-2 border-t border-slate-100' : 'max-h-0 opacity-0 mt-0 pt-0'}`}>
 
           {/* Explanation */}
           {/* Translation (Replaces Explanation) */}
           {item.translation && (
-            <div className="bg-indigo-50/80 rounded-xl p-4 border border-indigo-100 mb-6">
-              <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm uppercase tracking-wider mb-2">
+            <div className="bg-indigo-50/80 rounded-xl p-3 border border-indigo-100 mb-4">
+              <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm uppercase tracking-wider mb-1">
                 <Languages size={14} /> Translation
               </div>
-              <p className="text-slate-700 text-base leading-relaxed whitespace-pre-line font-medium">{item.translation}</p>
+              <p className="text-slate-700 text-lg leading-relaxed whitespace-pre-line font-medium">{item.translation}</p>
             </div>
           )}
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-4">
             {/* Patterns */}
             {item.patterns && item.patterns.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 text-amber-600 font-bold text-sm uppercase tracking-wider mb-3">
-                  <List size={14} /> Patterns & Nuances
+                <div className="flex items-center gap-2 text-amber-600 font-bold text-sm uppercase tracking-wider mb-2">
+                  <List size={14} /> Patterns
                 </div>
                 <div className="space-y-2">
                   {item.patterns.map((pat, pi) => (
-                    <div key={pi} className="bg-amber-50/50 p-3 rounded-xl border border-amber-100/50">
-                      <span className="font-bold text-slate-800 text-base block mb-0.5">{pat.term}</span>
-                      <span className="text-slate-600 text-sm leading-relaxed block">{pat.definition}</span>
+                    <div key={pi} className="bg-amber-50/50 p-2.5 rounded-xl border border-amber-100/50">
+                      <span className="font-bold text-slate-800 text-lg block mb-0.5">{pat.term}</span>
+                      <span className="text-slate-600 text-base leading-relaxed block">{pat.definition}</span>
                     </div>
                   ))}
                 </div>
