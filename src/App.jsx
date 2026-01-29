@@ -411,11 +411,13 @@ const generateHTML = (data, filename, mediaDataUrl) => {
 
                     if(prevBtn) prevBtn.onclick = () => {
                         const idx = getCurrentIndex();
-                        if(idx > 0) window.jumpTo(idx - 1);
+                        const targetIdx = idx === -1 ? 0 : (idx - 1 + transcriptData.length) % transcriptData.length;
+                        window.jumpTo(targetIdx);
                     };
                     if(nextBtn) nextBtn.onclick = () => {
                         const idx = getCurrentIndex();
-                        if(idx < transcriptData.length - 1) window.jumpTo(idx + 1);
+                        const targetIdx = idx === -1 ? 0 : (idx + 1) % transcriptData.length;
+                        window.jumpTo(targetIdx);
                     };
 
 
@@ -459,8 +461,14 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                         updateLoopBtns();
                     };
 
-                    window.handlePrev = (i) => { if(i > 0) window.jumpTo(i-1); };
-                    window.handleNext = (i) => { if(i < transcriptData.length-1) window.jumpTo(i+1); };
+                    window.handlePrev = (i) => { 
+                        const targetIdx = (i - 1 + transcriptData.length) % transcriptData.length;
+                        window.jumpTo(targetIdx); 
+                    };
+                    window.handleNext = (i) => { 
+                        const targetIdx = (i + 1) % transcriptData.length;
+                        window.jumpTo(targetIdx); 
+                    };
 
                     window.toggleAnalysis = (i) => {
                         try {
@@ -544,11 +552,13 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                             // Loop current active item
                             if (activeIdx !== -1) window.toggleLoop(activeIdx);
                         } else if (e.code === 'ArrowLeft') {
-                            if (activeIdx !== -1 && activeIdx > 0) window.jumpTo(activeIdx - 1);
-                            else if (activeIdx === -1 && transcriptData.length > 0) window.jumpTo(0);
+                            const idx = activeIdx !== -1 ? activeIdx : 0;
+                            const targetIdx = (idx - 1 + transcriptData.length) % transcriptData.length;
+                            window.jumpTo(targetIdx);
                         } else if (e.code === 'ArrowRight') {
-                            if (activeIdx !== -1 && activeIdx < transcriptData.length - 1) window.jumpTo(activeIdx + 1);
-                             else if (activeIdx === -1 && transcriptData.length > 0) window.jumpTo(0);
+                            const idx = activeIdx !== -1 ? activeIdx : 0;
+                            const targetIdx = (idx + 1) % transcriptData.length;
+                            window.jumpTo(targetIdx);
                         } else if (e.code === 'ArrowUp') {
                             e.preventDefault();
                             if(video) video.volume = Math.min(1, video.volume + 0.1);
@@ -934,11 +944,17 @@ const App = () => {
   }, [seekTo, activeFile]);
 
   const handlePrev = useCallback((currentIndex) => {
-    if (currentIndex > 0) jumpToSentence(currentIndex - 1);
-  }, [jumpToSentence]);
+    if (activeFile?.data?.length) {
+      const prevIndex = (currentIndex - 1 + activeFile.data.length) % activeFile.data.length;
+      jumpToSentence(prevIndex);
+    }
+  }, [jumpToSentence, activeFile]);
 
   const handleNext = useCallback((currentIndex) => {
-    if (activeFile?.data && currentIndex < activeFile.data.length - 1) jumpToSentence(currentIndex + 1);
+    if (activeFile?.data?.length) {
+      const nextIndex = (currentIndex + 1) % activeFile.data.length;
+      jumpToSentence(nextIndex);
+    }
   }, [jumpToSentence, activeFile]);
 
 
@@ -998,12 +1014,18 @@ const App = () => {
       switch (e.code) {
         case 'Enter': if (currentIdx !== -1) toggleLoop(currentIdx); break;
         case 'ArrowLeft':
-          if (currentIdx > 0) handlePrev(currentIdx);
-          else if (currentIdx === -1 && data.length > 0) jumpToSentence(0);
+          if (data.length > 0) {
+            const idx = currentIdx !== -1 ? currentIdx : 0;
+            const prevIdx = (idx - 1 + data.length) % data.length;
+            jumpToSentence(prevIdx);
+          }
           break;
         case 'ArrowRight':
-          if (currentIdx < data.length - 1) handleNext(currentIdx);
-          else if (currentIdx === -1 && data.length > 0) jumpToSentence(0);
+          if (data.length > 0) {
+            const idx = currentIdx !== -1 ? currentIdx : 0;
+            const nextIdx = (idx + 1) % data.length;
+            jumpToSentence(nextIdx);
+          }
           break;
         case 'ArrowUp': e.preventDefault(); setVolume(v => Math.min(v + 0.1, 1)); break;
         case 'ArrowDown': e.preventDefault(); setVolume(v => Math.max(v - 0.1, 0)); break;
