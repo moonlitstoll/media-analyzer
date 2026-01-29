@@ -59,9 +59,8 @@ const generateHTML = (data, filename, mediaDataUrl) => {
             </div>
         </div>
 
-        <!-- Bottom: Player Section (Sticky) -->
         <div class="flex-none bg-white z-20 border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-            <div class="max-w-3xl mx-auto">
+            <div class="max-w-5xl mx-auto">
                 <div class="flex flex-row h-[72px] items-stretch">
                     <!-- Video (Square, Left) -->
                     <div class="relative bg-black h-full aspect-square flex-shrink-0 border-r border-slate-100">
@@ -100,7 +99,7 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                              </div>
 
                              <!-- Center: Prev - Play - Next -->
-                             <div class="flex items-center gap-2 sm:gap-6">
+                             <div class="flex items-center gap-2 sm:gap-4 md:gap-6">
                                  <button id="prev-btn" class="p-1 sm:p-2 text-slate-400 hover:text-indigo-600 active:scale-95 transition-transform"><i data-lucide="chevron-left" class="w-6 h-6 sm:w-8 sm:h-8"></i></button>
                                  
                                  <button id="play-btn" class="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-95 transition-all">
@@ -1345,7 +1344,7 @@ const App = () => {
 
             {/* 2. Bottom Player Controls (Sticky Bottom) */}
             <div className="flex-none bg-white border-t border-slate-200 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
-              <div className="max-w-3xl mx-auto">
+              <div className="max-w-5xl mx-auto">
                 <div className="flex flex-row h-[80px] items-stretch">
                   {/* Video (Square, Left) */}
                   <div className="relative bg-black h-full aspect-square flex-shrink-0 border-r border-slate-100 group">
@@ -1418,7 +1417,7 @@ const App = () => {
                       </div>
 
                       {/* Center: Prev - Play - Next */}
-                      <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
                         <button
                           onClick={() => handlePrev(currentSentenceIdx !== -1 ? currentSentenceIdx : 0)}
                           className="p-2 text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform"
