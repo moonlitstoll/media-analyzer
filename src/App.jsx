@@ -65,41 +65,50 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                     <!-- Controls (Right, Flex Column) -->
                     <div class="flex-1 px-4 py-2 flex flex-col justify-center gap-1 min-w-0 bg-white">
                          <!-- Row 1: Time & Progress -->
-                         <div class="flex items-center gap-3 text-[10px] font-mono font-medium text-slate-400">
-                            <span id="current-time" class="w-8">00:00</span>
+                         <!-- Row 1: Time & Progress -->
+                         <div class="flex items-center gap-3 text-[11px] font-mono font-bold text-slate-500">
+                            <span id="current-time" class="w-10">00:00</span>
                             
-                            <div id="progress-container" class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden cursor-pointer relative group">
+                            <div id="progress-container" class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden cursor-pointer relative group">
                                 <div class="absolute inset-0 w-full h-full hover:bg-slate-200/50 transition-colors"></div>
                                 <div id="progress-bar" class="h-full bg-indigo-500 rounded-full relative group-hover:bg-indigo-600 transition-colors" style="width: 0%"></div>
                             </div>
 
-                            <span id="duration" class="w-8 text-right">00:00</span>
+                            <span id="duration" class="w-10 text-right">00:00</span>
                          </div>
 
                          <!-- Row 2: Main Buttons (Centered) -->
-                         <div class="flex items-center justify-between mt-1">
-                             <!-- Left Spacer / Speed -->
-                             <div class="w-12 flex justify-start">
-                                 <div class="flex items-center gap-1 opacity-50 hover:opacity-100 transition-opacity">
-                                    <span id="speed-display" class="text-[10px] font-bold text-slate-600">1.0x</span>
-                                    <input type="range" id="speed-slider" min="0.5" max="2.0" step="0.1" value="1.0" class="w-8 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                         <!-- Row 2: Main Buttons (Centered) -->
+                         <div class="flex items-center justify-between mt-0.5 relative">
+                             <!-- Speed Selector (Popup) -->
+                             <div class="relative">
+                                 <button id="speed-btn" class="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-200 transition-colors">
+                                     <span id="speed-display">1.0x</span>
+                                 </button>
+                                 <div id="speed-menu" class="hidden absolute bottom-full left-0 mb-3 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 min-w-[120px] grid grid-cols-1 gap-1 z-[60]">
+                                     <button class="speed-opt px-3 py-2 text-left hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-base font-bold text-slate-600" data-val="0.5">0.5x</button>
+                                     <button class="speed-opt px-3 py-2 text-left hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-base font-bold text-slate-600" data-val="0.8">0.8x</button>
+                                     <button class="speed-opt px-3 py-2 text-left hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-base font-bold text-slate-600" data-val="1.0">1.0x (Normal)</button>
+                                     <button class="speed-opt px-3 py-2 text-left hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-base font-bold text-slate-600" data-val="1.2">1.2x</button>
+                                     <button class="speed-opt px-3 py-2 text-left hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-base font-bold text-slate-600" data-val="1.5">1.5x</button>
+                                     <button class="speed-opt px-3 py-2 text-left hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-base font-bold text-slate-600" data-val="2.0">2.0x</button>
                                  </div>
                              </div>
 
                              <!-- Center: Prev - Play - Next -->
-                             <div class="flex items-center gap-4">
-                                 <button id="prev-btn" class="p-2 text-slate-400 hover:text-indigo-600 active:scale-95 transition-transform"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
+                             <div class="flex items-center gap-6">
+                                 <button id="prev-btn" class="p-2 text-slate-400 hover:text-indigo-600 active:scale-95 transition-transform"><i data-lucide="chevron-left" class="w-8 h-8"></i></button>
                                  
-                                 <button id="play-btn" class="w-8 h-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-md shadow-indigo-500/30 active:scale-95 transition-all">
-                                     <i data-lucide="play" class="w-4 h-4 ml-0.5"></i>
+                                 <button id="play-btn" class="w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-95 transition-all">
+                                     <i data-lucide="play" class="w-6 h-6 ml-0.5"></i>
                                  </button>
                                  
-                                 <button id="next-btn" class="p-2 text-slate-400 hover:text-indigo-600 active:scale-95 transition-transform"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
+                                 <button id="next-btn" class="p-2 text-slate-400 hover:text-indigo-600 active:scale-95 transition-transform"><i data-lucide="chevron-right" class="w-8 h-8"></i></button>
                              </div>
 
                              <!-- Right Spacer / Volume (Hidden on small) -->
                              <div class="w-12 flex justify-end">
-                                 <button id="mute-btn" class="p-1 text-slate-400 hover:text-indigo-600"><i data-lucide="volume-2" class="w-4 h-4"></i></button>
+                                 <button id="mute-btn" class="p-2 text-slate-400 hover:text-indigo-600"><i data-lucide="volume-2" class="w-5 h-5"></i></button>
                              </div>
                          </div>
                     </div>
@@ -160,12 +169,11 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                     const progressContainer = document.getElementById('progress-container');
                     const currentTimeEl = document.getElementById('current-time');
                     const durationEl = document.getElementById('duration');
-                    const speedSlider = document.getElementById('speed-slider');
-                    const speedDisplay = document.getElementById('speed-display');
-                    const analyzeBtn = document.getElementById('toggle-analysis-btn');
-                    const muteBtn = document.getElementById('mute-btn');
                     const prevBtn = document.getElementById('prev-btn');
                     const nextBtn = document.getElementById('next-btn');
+                    const speedBtn = document.getElementById('speed-btn');
+                    const speedMenu = document.getElementById('speed-menu');
+                    const speedOpts = document.querySelectorAll('.speed-opt');
 
                     if(window.lucide) lucide.createIcons();
 
@@ -370,10 +378,15 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                         if(muteBtn) muteBtn.onclick = () => { video.muted = !video.muted; };
                         // volumeSlider was removed from HTML, so this line is commented out or removed
                         // if(volumeSlider) volumeSlider.oninput = (e) => video.volume = e.target.value;
-                        if(speedSlider) speedSlider.oninput = (e) => { 
-                            video.playbackRate = e.target.value; 
-                            if(speedDisplay) speedDisplay.textContent = e.target.value + 'x'; 
-                        };
+                        if(speedBtn) speedBtn.onclick = () => { if(speedMenu) speedMenu.classList.toggle('hidden'); };
+                        if(speedOpts) speedOpts.forEach(opt => {
+                            opt.onclick = () => {
+                                const val = parseFloat(opt.dataset.val);
+                                video.playbackRate = val;
+                                if(speedDisplay) speedDisplay.textContent = val + 'x';
+                                if(speedMenu) speedMenu.classList.add('hidden');
+                            };
+                        });
                         
                         if(progressContainer) progressContainer.onclick = (e) => {
                             const rect = progressContainer.getBoundingClientRect();
@@ -766,6 +779,7 @@ const App = () => {
 
   // UI state
   const [showAnalysis, setShowAnalysis] = useState(true);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
 
   const videoRef = useRef(null);
   const loopingSentenceIdxRef = useRef(null);
