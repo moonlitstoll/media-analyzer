@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Play, Pause, Rewind, FastForward,
   Eye, EyeOff, Languages, List, Search, Upload,
@@ -109,21 +109,11 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                                  <button id="next-btn" class="p-1 sm:p-2 text-slate-400 hover:text-indigo-600 active:scale-95 transition-transform"><i data-lucide="chevron-right" class="w-6 h-6 sm:w-8 sm:h-8"></i></button>
                              </div>
 
-                             <!-- Right: Volume Popup -->
+                             <!-- Right: Repeat Toggle -->
                              <div class="relative">
-                                 <button id="mute-btn" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
-                                     <i data-lucide="volume-2" class="w-6 h-6"></i>
+                                 <button id="bottom-loop-btn" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
+                                     <i data-lucide="repeat" class="w-6 h-6"></i>
                                  </button>
-                                 <div id="volume-menu" class="hidden absolute bottom-full right-0 mb-3 bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 min-w-[60px] z-[60]">
-                                     <div class="flex flex-col items-center gap-3">
-                                          <span id="volume-display" class="text-xs font-bold text-slate-500">100%</span>
-                                          <div class="h-32 py-2">
-                                              <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" 
-                                                     style="appearance: slider-vertical; -webkit-appearance: slider-vertical; width: 8px; height: 100%;" 
-                                                     class="cursor-pointer accent-indigo-600">
-                                          </div>
-                                     </div>
-                                 </div>
                              </div>
                          </div>
                     </div>
@@ -366,6 +356,7 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                                 btn.classList.add('text-slate-400');
                             }
                         }
+                        if (typeof updateBottomLoopBtn === 'function') updateBottomLoopBtn();
                     }
 
                     // Playback Events
@@ -388,50 +379,35 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                         });
 
                         if(playBtn) playBtn.onclick = () => video.paused ? video.play() : video.pause();
-                        const volumeMenu = document.getElementById('volume-menu');
-                        const volumeDisplay = document.getElementById('volume-display');
+                        const bottomLoopBtn = document.getElementById('bottom-loop-btn');
+                        if(bottomLoopBtn) {
+                            bottomLoopBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                const idx = getCurrentIndex();
+                                if (idx !== -1) window.toggleLoop(idx);
+                            };
+                        }
 
-                        if(muteBtn) muteBtn.onclick = (e) => {
+                        function updateBottomLoopBtn() {
+                            if (!bottomLoopBtn) return;
+                            if (window.loopingIdx !== null) {
+                                bottomLoopBtn.classList.add('bg-orange-100', 'text-orange-600', 'ring-2', 'ring-orange-200');
+                                bottomLoopBtn.classList.remove('text-slate-400');
+                            } else {
+                                bottomLoopBtn.classList.remove('bg-orange-100', 'text-orange-600', 'ring-2', 'ring-orange-200');
+                                bottomLoopBtn.classList.add('text-slate-400');
+                            }
+                        }
+
+                        if(muteBtn) muteBtn.onclick = (e) => { 
                             e.stopPropagation();
-                            if(volumeMenu) volumeMenu.classList.toggle('hidden');
-                            if(speedMenu) speedMenu.classList.add('hidden');
+                            if(speedMenu) speedMenu.classList.toggle('hidden'); 
                         };
                         
                         if(speedBtn) speedBtn.onclick = (e) => { 
                             e.stopPropagation();
                             if(speedMenu) speedMenu.classList.toggle('hidden'); 
-                            if(volumeMenu) volumeMenu.classList.add('hidden');
                         };
-                        
-                        if(speedOpts) speedOpts.forEach(opt => {
-                            opt.onclick = (e) => {
-                                e.stopPropagation();
-                                const val = parseFloat(opt.dataset.val);
-                                if(video) video.playbackRate = val;
-                                if(speedDisplay) speedDisplay.textContent = val + 'x';
-                                if(speedMenu) speedMenu.classList.add('hidden');
-                            };
-                        });
-
-                        const volumeSlider = document.getElementById('volume-slider');
-                        if(volumeSlider) {
-                            volumeSlider.onclick = (e) => e.stopPropagation();
-                            volumeSlider.oninput = (e) => {
-                                const val = parseFloat(e.target.value);
-                                if(video) video.volume = val;
-                                if(volumeDisplay) volumeDisplay.textContent = Math.round(val * 100) + '%';
-                            };
-                        }
-
-                        if(video) video.addEventListener('volumechange', () => {
-                             if(volumeSlider) volumeSlider.value = video.volume;
-                             if(volumeDisplay) volumeDisplay.textContent = Math.round(video.volume * 100) + '%';
-                             if(muteBtn) {
-                                 if(video.muted || video.volume === 0) muteBtn.innerHTML = '<i data-lucide="volume-x" class="w-6 h-6"></i>';
-                                 else muteBtn.innerHTML = '<i data-lucide="volume-2" class="w-6 h-6"></i>';
-                                 if(window.lucide) lucide.createIcons();
-                             }
-                        });
                         
                         if(progressContainer) progressContainer.onclick = (e) => {
                             const rect = progressContainer.getBoundingClientRect();
@@ -1543,48 +1519,15 @@ const App = () => {
                         </button>
                       </div>
 
-                      {/* Right: Volume */}
+                      {/* Right: Repeat Toggle */}
                       <div className="relative pr-6">
                         <button
-                          onClick={(e) => { e.stopPropagation(); setShowVolumeMenu(!showVolumeMenu); }}
-                          className="text-slate-400 hover:text-indigo-600 transition-colors p-2"
+                          onClick={(e) => { e.stopPropagation(); toggleLoop(currentSentenceIdx !== -1 ? currentSentenceIdx : 0); }}
+                          className={`p-2 rounded-xl transition-all ${loopingSentenceIdx !== null ? 'bg-orange-100 text-orange-600 ring-2 ring-orange-200' : 'text-slate-400 hover:text-indigo-600'}`}
+                          title="Repeat Sentence"
                         >
-                          {volume === 0 ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                          <Repeat size={24} />
                         </button>
-
-                        {showVolumeMenu && (
-                          <div
-                            className="absolute bottom-full right-0 mb-3 bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 z-[60] animate-in slide-in-from-bottom-2 duration-200"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div className="flex flex-col items-center gap-3">
-                              <span className="text-xs font-bold text-slate-500">{Math.round(volume * 100)}%</span>
-                              <div className="h-32 flex items-center justify-center py-2">
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="1"
-                                  step="0.05"
-                                  value={volume}
-                                  onChange={(e) => setVolume(parseFloat(e.target.value))}
-                                  style={{
-                                    appearance: 'slider-vertical',
-                                    WebkitAppearance: 'slider-vertical',
-                                    width: '8px',
-                                    height: '100%'
-                                  }}
-                                  className="h-full cursor-pointer accent-indigo-600"
-                                />
-                              </div>
-                              <button
-                                onClick={() => setVolume(volume === 0 ? 1 : 0)}
-                                className="text-slate-400 hover:text-indigo-600 transition-colors"
-                              >
-                                {volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                              </button>
-                            </div>
-                          </div>
-                        )}
                       </div>
 
                     </div>
