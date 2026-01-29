@@ -83,10 +83,10 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                          </div>
 
                          <!-- Row 2: Main Buttons (Centered) -->
-                         <div class="flex items-center justify-between mt-0.5 relative">
+                         <div class="flex items-center justify-between mt-0.5 relative gap-2">
                              <!-- Speed Selector (Popup) -->
                              <div class="relative">
-                                 <button id="speed-btn" class="flex items-center justify-center gap-2 px-6 py-2 bg-slate-100 rounded-xl text-base font-bold text-slate-700 hover:bg-slate-200 transition-all min-w-[120px]">
+                                 <button id="speed-btn" class="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-6 py-2 bg-slate-100 rounded-xl text-sm sm:text-base font-bold text-slate-700 hover:bg-slate-200 transition-all min-w-0 sm:min-w-[120px]">
                                      <span id="speed-display">1.0x</span>
                                  </button>
                                  <div id="speed-menu" class="hidden absolute bottom-full left-0 mb-3 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 min-w-[120px] grid grid-cols-1 gap-1 z-[60]">
@@ -100,20 +100,20 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                              </div>
 
                              <!-- Center: Prev - Play - Next -->
-                             <div class="flex items-center gap-6">
-                                 <button id="prev-btn" class="p-2 text-slate-400 hover:text-indigo-600 active:scale-95 transition-transform"><i data-lucide="chevron-left" class="w-8 h-8"></i></button>
+                             <div class="flex items-center gap-2 sm:gap-6">
+                                 <button id="prev-btn" class="p-1 sm:p-2 text-slate-400 hover:text-indigo-600 active:scale-95 transition-transform"><i data-lucide="chevron-left" class="w-6 h-6 sm:w-8 sm:h-8"></i></button>
                                  
-                                 <button id="play-btn" class="w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-95 transition-all">
-                                     <i data-lucide="play" class="w-6 h-6 ml-0.5"></i>
+                                 <button id="play-btn" class="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-95 transition-all">
+                                     <i data-lucide="play" class="w-5 h-5 sm:w-6 sm:h-6 ml-0.5"></i>
                                  </button>
                                  
-                                 <button id="next-btn" class="p-2 text-slate-400 hover:text-indigo-600 active:scale-95 transition-transform"><i data-lucide="chevron-right" class="w-8 h-8"></i></button>
+                                 <button id="next-btn" class="p-1 sm:p-2 text-slate-400 hover:text-indigo-600 active:scale-95 transition-transform"><i data-lucide="chevron-right" class="w-6 h-6 sm:w-8 sm:h-8"></i></button>
                              </div>
 
                              <!-- Right Spacer / Volume -->
-                             <div class="flex items-center gap-3">
-                                 <button id="mute-btn" class="text-slate-400 hover:text-indigo-600 transition-colors"><i data-lucide="volume-2" class="w-6 h-6"></i></button>
-                                 <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="1" class="w-32 sm:w-48 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                             <div class="flex items-center gap-1 sm:gap-3">
+                                 <button id="mute-btn" class="p-1 sm:p-0 text-slate-400 hover:text-indigo-600 transition-colors"><i data-lucide="volume-2" class="w-5 h-5 sm:w-6 sm:h-6"></i></button>
+                                 <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="1" class="hidden sm:block w-32 sm:w-48 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
                              </div>
                          </div>
                     </div>
