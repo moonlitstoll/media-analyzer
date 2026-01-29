@@ -52,9 +52,15 @@ const generateHTML = (data, filename, mediaDataUrl) => {
     <!-- Main Content -->
     <div class="flex-1 flex flex-col overflow-hidden relative">
 
-        <!-- Top: Player Section (Sticky) -->
-        <!-- Top: Player Section (Sticky) -->
-        <div class="flex-none bg-white z-10 border-b border-slate-200">
+        <!-- Transcript List -->
+        <div class="flex-1 w-full overflow-y-auto relative" id="scroll-container">
+            <div id="transcript-list" class="max-w-3xl mx-auto p-4 space-y-4 pb-32">
+                <!-- Transcript items injected here -->
+            </div>
+        </div>
+
+        <!-- Bottom: Player Section (Sticky) -->
+        <div class="flex-none bg-white z-20 border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
             <div class="max-w-3xl mx-auto">
                 <div class="flex flex-row h-[72px] items-stretch">
                     <!-- Video (Square, Left) -->
@@ -63,8 +69,7 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                     </div>
 
                     <!-- Controls (Right, Flex Column) -->
-                    <div class="flex-1 px-4 py-2 flex flex-col justify-center gap-1 min-w-0 bg-white">
-                         <!-- Row 1: Time & Progress -->
+                    <div class="flex-1 px-4 py-2 flex flex-col justify-center gap-1.5 min-w-0 bg-white">
                          <!-- Row 1: Time & Progress -->
                          <div class="flex items-center gap-3 text-[11px] font-mono font-bold text-slate-500">
                             <span id="current-time" class="w-10">00:00</span>
@@ -77,7 +82,6 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                             <span id="duration" class="w-10 text-right">00:00</span>
                          </div>
 
-                         <!-- Row 2: Main Buttons (Centered) -->
                          <!-- Row 2: Main Buttons (Centered) -->
                          <div class="flex items-center justify-between mt-0.5 relative">
                              <!-- Speed Selector (Popup) -->
@@ -114,13 +118,6 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                          </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Transcript List -->
-        <div class="flex-1 w-full overflow-y-auto relative" id="scroll-container">
-            <div id="transcript-list" class="max-w-3xl mx-auto p-4 space-y-4 pb-32">
-                <!-- Transcript items injected here -->
             </div>
         </div>
 
@@ -322,8 +319,8 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                                 const ctr = el.querySelector('.controls-group'); if(ctr) ctr.classList.remove('opacity-0');
                                 
                                 if (loopingIdx === null) {
-                                    // Smooth scroll to center if possible, or start
-                                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    // Smooth scroll to top
+                                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                 }
                             } else {
                                 el.classList.add('opacity-60', 'bg-white/80', 'border-slate-100');
