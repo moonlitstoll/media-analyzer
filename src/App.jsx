@@ -173,8 +173,11 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                     const prevBtn = document.getElementById('prev-btn');
                     const nextBtn = document.getElementById('next-btn');
                     const speedBtn = document.getElementById('speed-btn');
+                    const speedDisplay = document.getElementById('speed-display');
                     const speedMenu = document.getElementById('speed-menu');
                     const speedOpts = document.querySelectorAll('.speed-opt');
+                    const muteBtn = document.getElementById('mute-btn');
+                    const analyzeBtn = document.getElementById('toggle-analysis-btn');
 
                     if(window.lucide) lucide.createIcons();
 
@@ -379,6 +382,7 @@ const generateHTML = (data, filename, mediaDataUrl) => {
 
                         if(playBtn) playBtn.onclick = () => video.paused ? video.play() : video.pause();
                         if(muteBtn) muteBtn.onclick = () => { video.muted = !video.muted; };
+                        
                         if(speedBtn) speedBtn.onclick = () => { if(speedMenu) speedMenu.classList.toggle('hidden'); };
                         if(speedOpts) speedOpts.forEach(opt => {
                             opt.onclick = () => {
@@ -388,6 +392,7 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                                 if(speedMenu) speedMenu.classList.add('hidden');
                             };
                         });
+
                         const volumeSlider = document.getElementById('volume-slider');
                         if(volumeSlider) volumeSlider.oninput = (e) => {
                              if(video) video.volume = e.target.value;
@@ -399,15 +404,6 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                                  else muteBtn.innerHTML = '<i data-lucide="volume-2" class="w-5 h-5"></i>';
                                  if(window.lucide) lucide.createIcons();
                              }
-                        });
-                        if(speedBtn) speedBtn.onclick = () => { if(speedMenu) speedMenu.classList.toggle('hidden'); };
-                        if(speedOpts) speedOpts.forEach(opt => {
-                            opt.onclick = () => {
-                                const val = parseFloat(opt.dataset.val);
-                                video.playbackRate = val;
-                                if(speedDisplay) speedDisplay.textContent = val + 'x';
-                                if(speedMenu) speedMenu.classList.add('hidden');
-                            };
                         });
                         
                         if(progressContainer) progressContainer.onclick = (e) => {
@@ -854,6 +850,35 @@ const App = () => {
     }
   };
 
+  const loadCache = (key) => {
+    const cachedData = localStorage.getItem(key);
+    if (cachedData) {
+      try {
+        const data = JSON.parse(cachedData);
+        // Clean up name from key
+        const name = key.replace('gemini_analysis_', '').replace(/_\d+$/, '');
+        const id = 'cached-' + Date.now();
+
+        const newFileEntry = {
+          id,
+          // We don't have the original File object, but we need these properties
+          file: { name, type: 'video/unknown' },
+          data,
+          url: null, // Media playback won't work without re-uploading
+          isAnalyzing: false
+        };
+
+        setFiles(prev => [...prev, newFileEntry]);
+        setActiveFileId(id);
+        setShowSettings(false);
+        alert(`Loaded analysis for: ${name}\nNote: Media playback requires re-selecting the file.`);
+      } catch (e) {
+        console.error("Failed to load cache:", e);
+        alert("Failed to load cached data.");
+      }
+    }
+  };
+
   // Media Controls
   const seekTo = useCallback((s) => {
     if (videoRef.current) {
@@ -1116,10 +1141,15 @@ const App = () => {
                         const name = key.replace('gemini_analysis_', '').replace(/_\d+$/, '');
                         return (
                           <div key={key} className="flex items-center justify-between bg-white border border-slate-200 p-2 rounded-lg shadow-sm">
-                            <span className="text-xs font-medium text-slate-600 truncate max-w-[180px]" title={key}>{name}</span>
-                            <button onClick={() => deleteCache(key)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors" title="Delete">
-                              <Trash2 size={14} />
-                            </button>
+                            <span className="text-xs font-medium text-slate-600 truncate max-w-[150px]" title={key}>{name}</span>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => loadCache(key)} className="text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 p-1.5 rounded transition-colors" title="Load Cached Data">
+                                <Download size={14} />
+                              </button>
+                              <button onClick={() => deleteCache(key)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors" title="Delete">
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </div>
                         );
                       })
