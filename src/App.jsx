@@ -431,12 +431,23 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                         }
                     };
 
-                    window.seekTo = (s) => { if (video) { video.currentTime = s; video.play(); } };
+                    window.seekTo = (s) => { 
+                        if (video) { 
+                            const target = Math.max(0, Math.min(s, video.duration || 999999));
+                            video.currentTime = target; 
+                            video.play().catch(() => {
+                                // Fallback for browsers that block auto-play
+                                setTimeout(() => video.play().catch(() => {}), 50);
+                            }); 
+                        } 
+                    };
                     
                     window.jumpTo = (i) => { 
                         if (transcriptData[i] && video) {
                             loopingIdx = null; 
-                            window.seekTo(Math.max(0, transcriptData[i].seconds - 1.0)); 
+                            // Ensure precise jump with small delay if needed
+                            const targetTime = Math.max(0, transcriptData[i].seconds - 1.0);
+                            window.seekTo(targetTime);
                             updateLoopBtns(); 
                         }
                     };
@@ -881,9 +892,22 @@ const App = () => {
 
   // Media Controls
   const seekTo = useCallback((s) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = s;
-      videoRef.current.play();
+    const v = videoRef.current;
+    if (v) {
+      // Ensure target time is within valid range
+      const targetTime = Math.max(0, Math.min(s, v.duration || 999999));
+
+      // Force seek
+      v.currentTime = targetTime;
+
+      // If video is still in a state where it can't play, it might need a small kick
+      if (v.paused) {
+        v.play().catch(e => {
+          console.warn("Play interrupted or failed:", e);
+          // Retry playback on next frame if interrupted
+          requestAnimationFrame(() => v.play().catch(() => { }));
+        });
+      }
     }
   }, []);
 
