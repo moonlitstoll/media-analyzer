@@ -789,7 +789,7 @@ const App = () => {
   // UI state
   const [showAnalysis, setShowAnalysis] = useState(true);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
-  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+
 
   const videoRef = useRef(null);
   const loopingSentenceIdxRef = useRef(null);
