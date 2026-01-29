@@ -1161,17 +1161,15 @@ const App = () => {
                       cacheKeys.map(key => {
                         const name = key.replace('gemini_analysis_', '').replace(/_\d+$/, '');
                         return (
-                          <div key={key} className="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-xl shadow-sm hover:border-indigo-200 transition-colors group/item">
+                          <div
+                            key={key}
+                            onClick={() => loadCache(key)}
+                            className="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-xl shadow-sm hover:border-indigo-300 hover:bg-slate-50 transition-all cursor-pointer group/item"
+                          >
                             <span className="text-sm font-medium text-slate-700 truncate flex-1 mr-4" title={key}>{name}</span>
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => loadCache(key)}
-                                className="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg text-xs font-bold transition-all"
-                              >
-                                불러오기
-                              </button>
-                              <button
-                                onClick={() => deleteCache(key)}
+                                onClick={(e) => { e.stopPropagation(); deleteCache(key); }}
                                 className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                                 title="Delete"
                               >
