@@ -111,7 +111,7 @@ const generateHTML = (data, filename, mediaDataUrl) => {
 
                              <!-- Right: Repeat Toggle -->
                              <div class="relative">
-                                 <button id="bottom-loop-btn" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
+                                 <button id="bottom-loop-btn" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Repeat Current Sentence">
                                      <i data-lucide="repeat" class="w-6 h-6"></i>
                                  </button>
                              </div>
@@ -390,7 +390,7 @@ const generateHTML = (data, filename, mediaDataUrl) => {
 
                         function updateBottomLoopBtn() {
                             if (!bottomLoopBtn) return;
-                            if (window.loopingIdx !== null) {
+                            if (loopingIdx !== null) {
                                 bottomLoopBtn.classList.add('bg-orange-100', 'text-orange-600', 'ring-2', 'ring-orange-200');
                                 bottomLoopBtn.classList.remove('text-slate-400');
                             } else {
@@ -399,11 +399,6 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                             }
                         }
 
-                        if(muteBtn) muteBtn.onclick = (e) => { 
-                            e.stopPropagation();
-                            if(speedMenu) speedMenu.classList.toggle('hidden'); 
-                        };
-                        
                         if(speedBtn) speedBtn.onclick = (e) => { 
                             e.stopPropagation();
                             if(speedMenu) speedMenu.classList.toggle('hidden'); 
@@ -582,25 +577,16 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                             window.jumpTo(targetIdx);
                         } else if (e.code === 'ArrowUp') {
                             e.preventDefault();
-                            if(video) {
-                                video.volume = Math.min(1, video.volume + 0.1);
-                                if(volumeSlider) volumeSlider.value = video.volume;
-                                if(volumeDisplay) volumeDisplay.textContent = Math.round(video.volume * 100) + '%';
-                            }
+                            if(video) video.currentTime -= 5;
                         } else if (e.code === 'ArrowDown') {
                             e.preventDefault();
-                            if(video) {
-                                video.volume = Math.max(0, video.volume - 0.1);
-                                if(volumeSlider) volumeSlider.value = video.volume;
-                                if(volumeDisplay) volumeDisplay.textContent = Math.round(video.volume * 100) + '%';
-                            }
+                            if(video) video.currentTime += 5;
                         }
                     });
 
                     // Close menus on click outside
                     document.addEventListener('click', () => {
                         if(speedMenu) speedMenu.classList.add('hidden');
-                        if(volumeMenu) volumeMenu.classList.add('hidden');
                     });
 
                     if(analyzeBtn) {
@@ -842,7 +828,6 @@ const App = () => {
   // Player state
   const [currentTime, setCurrentTime] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1.0);
-  const [volume, setVolume] = useState(1.0);
   const [isDragging, setIsDragging] = useState(false);
   const [loopingSentenceIdx, setLoopingSentenceIdx] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -850,7 +835,6 @@ const App = () => {
   // UI state
   const [showAnalysis, setShowAnalysis] = useState(true);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
-  const [showVolumeMenu, setShowVolumeMenu] = useState(false);
   const [cacheKeys, setCacheKeys] = useState([]);
 
 
@@ -1050,9 +1034,8 @@ const App = () => {
     };
   }, [mediaUrl, activeFile]);
 
-  // Rate & Volume
+  // Rate
   useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate; }, [playbackRate]);
-  useEffect(() => { if (videoRef.current) videoRef.current.volume = volume; }, [volume]);
 
   // Keyboard
   useEffect(() => {
@@ -1084,8 +1067,8 @@ const App = () => {
             jumpToSentence(nextIdx);
           }
           break;
-        case 'ArrowUp': e.preventDefault(); setVolume(v => Math.min(v + 0.1, 1)); break;
-        case 'ArrowDown': e.preventDefault(); setVolume(v => Math.max(v - 0.1, 0)); break;
+        case 'ArrowUp': e.preventDefault(); if (videoRef.current) videoRef.current.currentTime -= 5; break;
+        case 'ArrowDown': e.preventDefault(); if (videoRef.current) videoRef.current.currentTime += 5; break;
       }
     };
     window.addEventListener('keydown', handleKeyDown);
