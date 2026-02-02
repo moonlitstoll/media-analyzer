@@ -862,7 +862,9 @@ const App = () => {
 
   // Derived active file
   const activeFile = files.find(f => f.id === activeFileId);
-  const transcriptData = activeFile?.data || [];
+  const transcriptData = useMemo(() => {
+    return activeFile?.data ? [...activeFile.data].sort((a, b) => a.seconds - b.seconds) : [];
+  }, [activeFile]);
   const mediaUrl = activeFile?.url || null;
   const isAnalyzing = activeFile?.isAnalyzing || false;
 
