@@ -273,10 +273,9 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                     function getCurrentIndex() {
                         if (!video || !transcriptData || transcriptData.length === 0) return -1;
                         const now = video.currentTime;
-                        // Add 1.0s buffer to 'now' so that during pre-roll, the upcoming sentence is considered active
-                        const adjustedNow = now + 1.0;
+                        // Determine active index strictly based on current time
                         return transcriptData.findIndex((item, i) => 
-                            adjustedNow >= item.seconds && (i === transcriptData.length - 1 || adjustedNow < transcriptData[i+1].seconds)
+                            now >= item.seconds && (i === transcriptData.length - 1 || now < transcriptData[i+1].seconds)
                         );
                     }
 
@@ -851,9 +850,8 @@ const App = () => {
   // Derived current sentence index
   const currentSentenceIdx = useMemo(() => {
     if (!transcriptData || transcriptData.length === 0) return -1;
-    const adjustedNow = currentTime + 1.0;
     return transcriptData.findIndex((item, idx) =>
-      adjustedNow >= item.seconds && (idx === transcriptData.length - 1 || adjustedNow < transcriptData[idx + 1].seconds)
+      currentTime >= item.seconds && (idx === transcriptData.length - 1 || currentTime < transcriptData[idx + 1].seconds)
     );
   }, [transcriptData, currentTime]);
 
