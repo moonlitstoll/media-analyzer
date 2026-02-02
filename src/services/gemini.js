@@ -131,24 +131,28 @@ export async function analyzeMedia(file, apiKey) {
         // Post-processing: Enforce timestamp accuracy
         // AI sometimes miscalculates 'seconds'. We recalculate it from the 'timestamp' string.
         data = data.map(item => {
-            const timeStr = item.timestamp.replace(/[\[\]]/g, ''); // Remove brackets
+            // Robust parsing: Remove everything except digits, colons, and dots
+            const timeStr = item.timestamp.replace(/[^0-9:.]/g, '');
             const parts = timeStr.split(':');
+
             let seconds = 0;
             if (parts.length === 2) {
                 const mm = parseInt(parts[0], 10);
                 const ss = parseFloat(parts[1]);
                 seconds = mm * 60 + ss;
             } else if (parts.length === 3) {
-                // Handle hh:mm:ss just in case
                 const hh = parseInt(parts[0], 10);
                 const mm = parseInt(parts[1], 10);
                 const ss = parseFloat(parts[2]);
                 seconds = hh * 3600 + mm * 60 + ss;
             }
 
+            // Validate result
+            if (isNaN(seconds)) seconds = 0;
+
             return {
                 ...item,
-                seconds: seconds > 0 ? seconds : item.seconds // Fallback if parse fails
+                seconds: seconds > 0 ? seconds : item.seconds
             };
         });
 
