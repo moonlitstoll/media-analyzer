@@ -423,12 +423,18 @@ const generateHTML = (data, filename, mediaDataUrl) => {
 
                     if(prevBtn) prevBtn.onclick = () => {
                         const idx = getCurrentIndex();
-                        const targetIdx = idx === -1 ? 0 : (idx - 1 + transcriptData.length) % transcriptData.length;
+                        // If idx is -1 (start), wrap to last. Otherwise standard prev logic.
+                        const targetIdx = idx === -1 
+                            ? transcriptData.length - 1 
+                            : (idx - 1 + transcriptData.length) % transcriptData.length;
                         window.jumpTo(targetIdx);
                     };
                     if(nextBtn) nextBtn.onclick = () => {
                         const idx = getCurrentIndex();
-                        const targetIdx = idx === -1 ? 0 : (idx + 1) % transcriptData.length;
+                        // If idx is -1 (start), go to 0. Otherwise next.
+                        const targetIdx = idx === -1 
+                            ? 0 
+                            : (idx + 1) % transcriptData.length;
                         window.jumpTo(targetIdx);
                     };
 
@@ -477,11 +483,19 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                     };
 
                     window.handlePrev = (i) => { 
-                        const targetIdx = (i - 1 + transcriptData.length) % transcriptData.length;
+                        // If undefined or -1, wrap to last
+                        const current = (i === undefined || i === -1) ? 0 : i; 
+                         // Logic: if -1, we want last. If 0, we want last. 
+                         // Actually if passed -1 directly, let's explicit handle it:
+                        const targetIdx = (i === -1) 
+                            ? transcriptData.length - 1 
+                            : (i - 1 + transcriptData.length) % transcriptData.length;
                         window.jumpTo(targetIdx); 
                     };
                     window.handleNext = (i) => { 
-                        const targetIdx = (i + 1) % transcriptData.length;
+                        const targetIdx = (i === -1) 
+                            ? 0 
+                            : (i + 1) % transcriptData.length;
                         window.jumpTo(targetIdx); 
                     };
 
@@ -567,12 +581,16 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                             // Loop current active item
                             if (activeIdx !== -1) window.toggleLoop(activeIdx);
                         } else if (e.code === 'ArrowLeft') {
-                            const idx = activeIdx !== -1 ? activeIdx : 0;
-                            const targetIdx = (idx - 1 + transcriptData.length) % transcriptData.length;
+                            const idx = activeIdx; 
+                            const targetIdx = idx === -1 
+                                ? transcriptData.length - 1 
+                                : (idx - 1 + transcriptData.length) % transcriptData.length;
                             window.jumpTo(targetIdx);
                         } else if (e.code === 'ArrowRight') {
-                            const idx = activeIdx !== -1 ? activeIdx : 0;
-                            const targetIdx = (idx + 1) % transcriptData.length;
+                            const idx = activeIdx;
+                            const targetIdx = idx === -1 
+                                ? 0 
+                                : (idx + 1) % transcriptData.length;
                             window.jumpTo(targetIdx);
                         } else if (e.code === 'ArrowUp') {
                             e.preventDefault();
@@ -968,14 +986,20 @@ const App = () => {
 
   const handlePrev = useCallback((currentIndex) => {
     if (activeFile?.data?.length) {
-      const prevIndex = (currentIndex - 1 + activeFile.data.length) % activeFile.data.length;
+      // If -1 (start), wrap to last. Else prev.
+      const prevIndex = (currentIndex === -1)
+        ? activeFile.data.length - 1
+        : (currentIndex - 1 + activeFile.data.length) % activeFile.data.length;
       jumpToSentence(prevIndex);
     }
   }, [jumpToSentence, activeFile]);
 
   const handleNext = useCallback((currentIndex) => {
     if (activeFile?.data?.length) {
-      const nextIndex = (currentIndex + 1) % activeFile.data.length;
+      // If -1 (start), go to 0. Else next.
+      const nextIndex = (currentIndex === -1)
+        ? 0
+        : (currentIndex + 1) % activeFile.data.length;
       jumpToSentence(nextIndex);
     }
   }, [jumpToSentence, activeFile]);
@@ -1054,15 +1078,19 @@ const App = () => {
         case 'Enter': if (currentIdx !== -1) toggleLoop(currentIdx); break;
         case 'ArrowLeft':
           if (data.length > 0) {
-            const idx = currentIdx !== -1 ? currentIdx : 0;
-            const prevIdx = (idx - 1 + data.length) % data.length;
+            const idx = currentIdx;
+            const prevIdx = (idx === -1)
+              ? data.length - 1
+              : (idx - 1 + data.length) % data.length;
             jumpToSentence(prevIdx);
           }
           break;
         case 'ArrowRight':
           if (data.length > 0) {
-            const idx = currentIdx !== -1 ? currentIdx : 0;
-            const nextIdx = (idx + 1) % data.length;
+            const idx = currentIdx;
+            const nextIdx = (idx === -1)
+              ? 0
+              : (idx + 1) % data.length;
             jumpToSentence(nextIdx);
           }
           break;
@@ -1476,7 +1504,7 @@ const App = () => {
                       {/* Center: Prev - Play - Next */}
                       <div className="flex items-center gap-3 sm:gap-6">
                         <button
-                          onClick={() => handlePrev(currentSentenceIdx !== -1 ? currentSentenceIdx : 0)}
+                          onClick={() => handlePrev(currentSentenceIdx)}
                           className="p-2 text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform"
                         >
                           <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
@@ -1490,7 +1518,7 @@ const App = () => {
                         </button>
 
                         <button
-                          onClick={() => handleNext(currentSentenceIdx !== -1 ? currentSentenceIdx : 0)}
+                          onClick={() => handleNext(currentSentenceIdx)}
                           className="p-2 text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform"
                         >
                           <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
