@@ -40,6 +40,9 @@ const SYSTEM_PROMPT = `
 - **translation**: '분석 보기'용 상세 번역.
 - **text**: 들리는 대로 100% 받아쓰기 (생략 금지).
 
+**[출력 포맷]**
+- 반드시 **JSON Array** 포맷으로만 응답하세요.
+- 다른 설명이나 텍스트를 포함하지 마세요.
 `;
 
 export async function analyzeMedia(file, apiKey) {
@@ -50,7 +53,12 @@ export async function analyzeMedia(file, apiKey) {
     if (file.size > 20 * 1024 * 1024) throw new Error("File size too large. Please use a file under 20MB.");
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        generationConfig: {
+            responseMimeType: "application/json",
+        },
+    });
 
     try {
         // Determine MIME type with fallback
@@ -103,12 +111,11 @@ export async function analyzeMedia(file, apiKey) {
         const text = response.text();
         console.log("Gemini Raw Response:", text.substring(0, 200) + "..."); // Log start of response
 
-        // Clean up markdown
-        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        // With JSON mode, text should be valid JSON
+        const jsonStr = text.trim();
 
-        // Find JSON array start (look for '[' followed by '{' to avoid matching text reports like '[검토 보고서]')
-        const match = jsonStr.match(/\[\s*\{/);
-        const startIdx = match ? match.index : jsonStr.indexOf('[');
+        // Safety: Ensure it looks like an array start
+        const startIdx = jsonStr.indexOf('[');
         const endIdx = jsonStr.lastIndexOf(']');
 
         if (startIdx === -1 || endIdx === -1) {
