@@ -1301,9 +1301,9 @@ const App = () => {
       )}
 
       {/* Header */}
-      <header className="h-16 flex-none bg-white border-b border-slate-200 flex items-center justify-between px-6 z-20 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="bg-indigo-600 text-white p-1.5 rounded-lg">
+      <header className="h-16 flex-none bg-white border-b border-slate-200 flex items-center justify-between px-3 sm:px-6 z-20 shadow-sm gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          <div className="bg-indigo-600 text-white p-1.5 rounded-lg flex-shrink-0">
             <Volume2 size={18} />
           </div>
           <h1 className="text-lg font-bold text-slate-900 hidden sm:block">MediaSmart</h1>
@@ -1311,35 +1311,35 @@ const App = () => {
 
         {/* File Tabs */}
         {/* File Manager Trigger */}
-        <div className="flex-1 mx-6 flex items-center justify-center md:justify-start">
+        <div className="flex-1 mx-2 sm:mx-6 flex items-center justify-center md:justify-start min-w-0">
           <button
             onClick={() => setShowFileList(true)}
-            className="flex items-center gap-3 px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-xl font-medium shadow-sm hover:bg-indigo-100 hover:shadow-md transition-all max-w-md w-full relative group"
+            className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-xl font-medium shadow-sm hover:bg-indigo-100 hover:shadow-md transition-all max-w-md w-full relative group min-w-0"
           >
-            <div className="p-1 bg-indigo-200 rounded text-indigo-700">
+            <div className="p-1 bg-indigo-200 rounded text-indigo-700 flex-shrink-0">
               {activeFile?.file.type.startsWith('video') ? <FileVideo size={16} /> : <FileAudio size={16} />}
             </div>
-            <span className="truncate flex-1 text-left">{activeFile?.file.name || "Select File"}</span>
-            <div className="flex items-center gap-2 text-indigo-400">
-              <span className="text-xs font-bold bg-white/50 px-2 py-0.5 rounded-md">{files.length} Files</span>
+            <span className="truncate flex-1 text-left text-sm sm:text-base">{activeFile?.file.name || "Select File"}</span>
+            <div className="flex items-center gap-1 sm:gap-2 text-indigo-400 flex-shrink-0">
+              <span className="text-xs font-bold bg-white/50 px-1.5 sm:px-2 py-0.5 rounded-md hidden xs:inline">{files.length} Files</span>
               <ChevronDown size={16} />
             </div>
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
           <button
             onClick={handleDownload}
-            className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-2 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
           >
-            <Download size={16} /> <span className="hidden sm:inline">HTML</span>
+            <Download size={18} className="sm:w-4 sm:h-4" /> <span className="hidden sm:inline">HTML</span>
           </button>
 
           <button
             onClick={() => setShowAnalysis(!showAnalysis)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${showAnalysis ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${showAnalysis ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'text-slate-400 hover:text-slate-600'}`}
           >
-            <Info size={16} />
+            <Info size={18} className="sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">All Analysis</span>
           </button>
         </div>
