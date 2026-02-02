@@ -287,7 +287,7 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                         if (loopingIdx !== null) {
                             const start = transcriptData[loopingIdx].seconds;
                             const end = loopingIdx < transcriptData.length - 1 ? transcriptData[loopingIdx+1].seconds : video.duration;
-                            if (video.currentTime >= end - 0.1) {
+                            if (video.currentTime >= end) {
                                 video.currentTime = Math.max(0, start - 1.0);
                                 video.play();
                             }
@@ -1023,7 +1023,7 @@ const App = () => {
       if (activeIdx !== null && data.length > 0) {
         const start = data[activeIdx].seconds;
         const end = activeIdx < data.length - 1 ? data[activeIdx + 1].seconds : v.duration;
-        if (now >= end - 0.1) {
+        if (now >= end) {
           // Loop restart with -1.0s offset
           v.currentTime = Math.max(0, start - 1.0);
           v.play();
@@ -1328,7 +1328,10 @@ const App = () => {
 
       {/* Header */}
       <header className="h-16 flex-none bg-white border-b border-slate-200 flex items-center justify-between px-3 sm:px-6 z-20 shadow-sm gap-2">
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <div
+          onClick={() => setActiveFileId(null)}
+          className="flex items-center gap-2 sm:gap-3 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+        >
           <div className="bg-indigo-600 text-white p-1.5 rounded-lg flex-shrink-0">
             <Volume2 size={18} />
           </div>
@@ -1543,7 +1546,34 @@ const App = () => {
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-center h-full text-slate-400">Select a file to view</div>
+          <div className="flex-1 flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
+            <div className="max-w-4xl w-full text-center space-y-10">
+              <div className="space-y-4">
+                <div className="inline-flex items-center justify-center p-3 bg-indigo-50 rounded-2xl ring-1 ring-indigo-100 mb-2">
+                  <Volume2 size={28} className="text-indigo-600" />
+                </div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
+                  Media<span className="text-indigo-600">Smart</span> Analyzer
+                </h1>
+                <p className="text-slate-500 text-lg">Select a file from the list or upload a new one.</p>
+              </div>
+              <div className={`
+                     max-w-3xl mx-auto group relative flex items-center gap-6 p-10 rounded-3xl border-2 border-dashed transition-all duration-300 cursor-pointer
+                     border-slate-200 hover:border-indigo-300 hover:bg-white bg-white/60
+                  `}>
+                <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={(e) => processFiles(e.target.files)} accept="audio/*,video/*" />
+                <div className="w-full flex flex-col items-center gap-4">
+                  <div className="p-4 bg-indigo-100 text-indigo-600 rounded-2xl group-hover:scale-110 transition-transform">
+                    <Upload size={32} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-xl">Drag & Drop Multiple Files</h3>
+                    <p className="text-slate-500 mt-2">or click to browse</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
