@@ -39,7 +39,6 @@ const SYSTEM_PROMPT = `
 **[세부 요구사항]**
 - **translation**: '분석 보기'용 상세 번역.
 - **text**: 들리는 대로 100% 받아쓰기 (생략 금지).
-
 `;
 
 export async function analyzeMedia(file, apiKey) {
@@ -106,9 +105,8 @@ export async function analyzeMedia(file, apiKey) {
         // Clean up markdown
         const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-        // Find JSON array start (look for '[' followed by '{' to avoid matching text reports like '[검토 보고서]')
-        const match = jsonStr.match(/\[\s*\{/);
-        const startIdx = match ? match.index : jsonStr.indexOf('[');
+        // Find array start/end if there's extra text
+        const startIdx = jsonStr.indexOf('[');
         const endIdx = jsonStr.lastIndexOf(']');
 
         if (startIdx === -1 || endIdx === -1) {
