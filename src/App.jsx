@@ -680,7 +680,7 @@ const TranscriptItem = ({
   useEffect(() => {
     // Scroll to START (top) of the view
     if (isActive && itemRef.current && !isGlobalLooping) {
-      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [isActive, isGlobalLooping]);
 
