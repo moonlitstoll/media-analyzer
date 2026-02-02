@@ -835,6 +835,7 @@ const App = () => {
   // UI state
   const [showAnalysis, setShowAnalysis] = useState(true);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [showFileList, setShowFileList] = useState(false);
   const [cacheKeys, setCacheKeys] = useState([]);
 
 
@@ -1197,25 +1198,27 @@ const App = () => {
 
         {showSettings && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl animate-in zoom-in duration-300">
-              <div className="flex justify-between items-center mb-4">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-5xl h-[85vh] flex flex-col animate-in zoom-in duration-300">
+              <div className="flex justify-between items-center mb-4 flex-none">
                 <h3 className="text-lg font-bold text-slate-900">Settings</h3>
                 <button onClick={() => setShowSettings(false)}><X size={20} className="text-slate-400" /></button>
               </div>
-              <div className="space-y-4">
-                <label className="block text-sm font-semibold text-slate-700">Google Gemini API Key</label>
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Enter your API Key"
-                  className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <button onClick={() => saveApiKey(apiKey)} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl">Save Key</button>
+              <div className="flex-1 flex flex-col min-h-0 space-y-4">
+                <div className="flex-none space-y-4">
+                  <label className="block text-sm font-semibold text-slate-700">Google Gemini API Key</label>
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="Enter your API Key"
+                    className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button onClick={() => saveApiKey(apiKey)} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl">Save Key</button>
+                </div>
 
-                <div className="pt-4 border-t border-slate-100">
-                  <h4 className="font-bold text-slate-800 mb-2 text-sm">Cached Transcripts</h4>
-                  <div className="space-y-2 max-h-40 overflow-y-auto mb-3 pr-1 bg-slate-50/50 rounded-lg p-1">
+                <div className="pt-4 border-t border-slate-100 flex-1 flex flex-col min-h-0">
+                  <h4 className="font-bold text-slate-800 mb-2 text-sm flex-none">Cached Transcripts</h4>
+                  <div className="space-y-2 flex-1 overflow-y-auto mb-3 pr-1 bg-slate-50/50 rounded-lg p-1">
                     {cacheKeys.length === 0 ? (
                       <p className="text-xs text-slate-400 text-center py-2">No cached files found.</p>
                     ) : (
@@ -1243,7 +1246,7 @@ const App = () => {
                     )}
                   </div>
                   {cacheKeys.length > 0 && (
-                    <button onClick={clearAllCache} className="w-full py-2 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 font-bold rounded-xl flex items-center justify-center gap-2 text-sm transition-colors">
+                    <button onClick={clearAllCache} className="w-full py-2 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 font-bold rounded-xl flex items-center justify-center gap-2 text-sm transition-colors flex-none">
                       <Trash2 size={14} /> Clear All Cache
                     </button>
                   )}
@@ -1307,27 +1310,21 @@ const App = () => {
         </div>
 
         {/* File Tabs */}
-        <div className="flex-1 overflow-x-auto mx-6 no-scrollbar flex items-center gap-2">
-          {files.map(f => (
-            <div
-              key={f.id}
-              onClick={() => setActiveFileId(f.id)}
-              className={`
-                        flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap border transition-all
-                        ${f.id === activeFileId
-                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm'
-                  : 'bg-white border-slate-100 text-slate-500 hover:bg-slate-50'}
-                    `}
-            >
-              {f.file.type.startsWith('video') ? <FileVideo size={12} /> : <FileAudio size={12} />}
-              <span className="max-w-[100px] truncate">{f.file.name}</span>
-              <button onClick={(e) => removeFile(f.id, e)} className="hover:text-red-500 rounded p-0.5"><X size={12} /></button>
+        {/* File Manager Trigger */}
+        <div className="flex-1 mx-6 flex items-center justify-center md:justify-start">
+          <button
+            onClick={() => setShowFileList(true)}
+            className="flex items-center gap-3 px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-xl font-medium shadow-sm hover:bg-indigo-100 hover:shadow-md transition-all max-w-md w-full relative group"
+          >
+            <div className="p-1 bg-indigo-200 rounded text-indigo-700">
+              {activeFile?.file.type.startsWith('video') ? <FileVideo size={16} /> : <FileAudio size={16} />}
             </div>
-          ))}
-          <label className="cursor-pointer text-slate-400 hover:text-indigo-600 p-1">
-            <Plus size={18} />
-            <input type="file" multiple className="hidden" onChange={(e) => processFiles(e.target.files)} accept="audio/*,video/*" />
-          </label>
+            <span className="truncate flex-1 text-left">{activeFile?.file.name || "Select File"}</span>
+            <div className="flex items-center gap-2 text-indigo-400">
+              <span className="text-xs font-bold bg-white/50 px-2 py-0.5 rounded-md">{files.length} Files</span>
+              <ChevronDown size={16} />
+            </div>
+          </button>
         </div>
 
         <div className="flex items-center gap-3">
@@ -1450,13 +1447,13 @@ const App = () => {
                     </div>
 
                     {/* Row 2: Main Buttons (Centered) */}
-                    <div className="flex items-center justify-between mt-0.5 relative">
+                    <div className="flex items-center justify-between mt-1 relative">
 
                       {/* Left: Speed Menu Popup */}
                       <div className="relative">
                         <button
                           onClick={(e) => { e.stopPropagation(); setShowSpeedMenu(!showSpeedMenu); }}
-                          className="flex items-center justify-center gap-2 px-6 py-2 bg-slate-100 rounded-xl text-base font-bold text-slate-700 hover:bg-slate-200 transition-all min-w-[120px]"
+                          className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 bg-slate-100 rounded-xl text-sm sm:text-base font-bold text-slate-700 hover:bg-slate-200 transition-all min-w-[80px] sm:min-w-[120px]"
                         >
                           {playbackRate.toFixed(1)}x
                         </button>
@@ -1479,37 +1476,37 @@ const App = () => {
                       </div>
 
                       {/* Center: Prev - Play - Next */}
-                      <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
+                      <div className="flex items-center gap-3 sm:gap-6">
                         <button
                           onClick={() => handlePrev(currentSentenceIdx !== -1 ? currentSentenceIdx : 0)}
                           className="p-2 text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform"
                         >
-                          <ChevronLeft size={32} />
+                          <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
                         </button>
 
                         <button
                           onClick={togglePlay}
-                          className="w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-95 transition-all"
+                          className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-95 transition-all"
                         >
-                          {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" className="ml-1" />}
+                          {isPlaying ? <Pause className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" /> : <Play className="w-5 h-5 sm:w-6 sm:h-6 ml-0.5" fill="currentColor" />}
                         </button>
 
                         <button
                           onClick={() => handleNext(currentSentenceIdx !== -1 ? currentSentenceIdx : 0)}
                           className="p-2 text-slate-400 hover:text-indigo-600 active:scale-90 transition-transform"
                         >
-                          <ChevronRight size={32} />
+                          <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
                         </button>
                       </div>
 
                       {/* Right: Repeat Toggle */}
-                      <div className="relative pr-6">
+                      <div className="relative">
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleLoop(currentSentenceIdx !== -1 ? currentSentenceIdx : 0); }}
                           className={`p-2 rounded-xl transition-all ${loopingSentenceIdx !== null ? 'bg-orange-100 text-orange-600 ring-2 ring-orange-200' : 'text-slate-400 hover:text-indigo-600'}`}
                           title="Repeat Sentence"
                         >
-                          <Repeat size={24} />
+                          <Repeat className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
                       </div>
 
@@ -1523,7 +1520,74 @@ const App = () => {
           <div className="flex items-center justify-center h-full text-slate-400">Select a file to view</div>
         )}
       </div>
-    </div>
+
+      {/* File Manager Modal */}
+      {
+        showFileList && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-5xl h-[85vh] flex flex-col animate-in zoom-in duration-300">
+              {/* Header */}
+              <div className="flex justify-between items-center mb-4 flex-none">
+                <div className="flex items-center gap-3">
+                  <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600">
+                    <List size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">File Manager</h3>
+                    <p className="text-sm text-slate-500">{files.length} files loaded</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowSettings(true)} className="flex items-center gap-2 px-3 py-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors font-medium text-sm">
+                    <Settings size={18} /> Settings
+                  </button>
+                  <button onClick={() => setShowFileList(false)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition-colors">
+                    <X size={24} />
+                  </button>
+                </div>
+              </div>
+
+              {/* File List */}
+              <div className="flex-1 overflow-y-auto min-h-0 space-y-3 p-1">
+                {files.map(f => (
+                  <div key={f.id}
+                    onClick={() => { setActiveFileId(f.id); setShowFileList(false); }}
+                    className={`group flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${f.id === activeFileId ? 'bg-indigo-50 border-indigo-200 ring-1 ring-indigo-500/20 shadow-md' : 'bg-white border-slate-100 hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-500/5'}`}
+                  >
+                    <div className="flex items-center gap-5 overflow-hidden">
+                      <div className={`p-4 rounded-2xl flex-shrink-0 transition-colors ${f.id === activeFileId ? 'bg-indigo-200 text-indigo-700' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500'}`}>
+                        {f.file.type.startsWith('video') ? <FileVideo size={28} /> : <FileAudio size={28} />}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className={`text-lg font-bold truncate mb-1 ${f.id === activeFileId ? 'text-indigo-900' : 'text-slate-700'}`}>{f.file.name}</h4>
+                        <div className="flex items-center gap-3 text-sm text-slate-500">
+                          <span className="bg-slate-100 px-2 py-0.5 rounded text-xs font-mono">{(f.file.size / 1024 / 1024).toFixed(1)} MB</span>
+                          {f.isAnalyzing ? <span className="text-indigo-600 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce"></span>Analyzing...</span> : <span>Ready</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => { removeFile(f.id, e); if (files.length <= 1) setShowFileList(false); }}
+                      className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      title="Delete File"
+                    >
+                      <Trash2 size={24} />
+                    </button>
+                  </div>
+                ))}
+
+                {/* Add New Button (Inside List) */}
+                <label className="flex items-center justify-center gap-3 w-full p-6 border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-2xl bg-slate-50/50 hover:bg-indigo-50/50 text-slate-400 hover:text-indigo-600 font-bold cursor-pointer transition-all group">
+                  <div className="p-2 bg-white rounded-full shadow-sm group-hover:scale-110 transition-transform"><Plus size={24} /></div>
+                  <span className="text-lg">Add Another File</span>
+                  <input type="file" multiple className="hidden" onChange={(e) => processFiles(e.target.files)} accept="audio/*,video/*" />
+                </label>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 };
 
