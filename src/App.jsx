@@ -848,6 +848,7 @@ const App = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [loopingSentenceIdx, setLoopingSentenceIdx] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [syncOffset, setSyncOffset] = useState(0); // Sync offset in seconds
 
   // UI state
   const [showAnalysis, setShowAnalysis] = useState(true);
@@ -868,10 +869,11 @@ const App = () => {
   // Derived current sentence index
   const currentSentenceIdx = useMemo(() => {
     if (!transcriptData || transcriptData.length === 0) return -1;
+    const adjustedTime = Math.max(0, currentTime + syncOffset);
     return transcriptData.findIndex((item, idx) =>
-      currentTime >= item.seconds && (idx === transcriptData.length - 1 || currentTime < transcriptData[idx + 1].seconds)
+      adjustedTime >= item.seconds && (idx === transcriptData.length - 1 || adjustedTime < transcriptData[idx + 1].seconds)
     );
-  }, [transcriptData, currentTime]);
+  }, [transcriptData, currentTime, syncOffset]);
 
   // Sync ref
   useEffect(() => { loopingSentenceIdxRef.current = loopingSentenceIdx; }, [loopingSentenceIdx]);
@@ -1240,6 +1242,23 @@ const App = () => {
                     className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <button onClick={() => saveApiKey(apiKey)} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl">Save Key</button>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-semibold text-slate-700">Sync Offset</label>
+                    <span className="text-sm font-mono text-indigo-600 font-bold">{syncOffset > 0 ? '+' : ''}{syncOffset.toFixed(1)}s</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-5.0"
+                    max="5.0"
+                    step="0.1"
+                    value={syncOffset}
+                    onChange={(e) => setSyncOffset(parseFloat(e.target.value))}
+                    className="w-full accent-indigo-600 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <p className="text-xs text-slate-400 text-center">Adjust if lyrics appear too early (-) or too late (+)</p>
                 </div>
 
                 <div className="pt-4 border-t border-slate-100 flex-1 flex flex-col min-h-0">
