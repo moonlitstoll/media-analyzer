@@ -11,7 +11,8 @@ const SYSTEM_PROMPT = `
    - 오직 **입으로 발음된 소리(단어, 감탄사, 추임새, 더듬는 소리)**만 기록하세요.
    - **중복 구간 필수**: 노래 후렴구 등 **똑같은 내용이 반복되어도 절대로 생략하거나 합치지 마세요.**
    - **쉐도잉 학습용**: 100번 반복되면 100번 모두 타임스탬프와 함께 기록해야 합니다.
-2. **초정밀 타임라인**: 0.1초 단위로 문장 시작/종료 시간을 기록합니다.
+   - **빈틈 없는 기록**: 2초 이상의 공백이 생기지 않도록 촘촘하게 기록하세요. (음악만 나오는 구간 제외)
+2. **초정밀 타임라인**: 0.1초 단위의 정확한 "timestamp" (`[mm: ss.S]`)가 생명입니다.
 3. **언어 및 발음**: 모든 설명은 **한국어**로 합니다.
 4. **학습 중심**: 단순 번역을 넘어 "회화 패턴"과 "단어별 분석"에 집중합니다.
 
@@ -125,7 +126,33 @@ export async function analyzeMedia(file, apiKey) {
         }
 
         const cleanJson = jsonStr.substring(startIdx, endIdx + 1);
-        return JSON.parse(cleanJson);
+        let data = JSON.parse(cleanJson);
+
+        // Post-processing: Enforce timestamp accuracy
+        // AI sometimes miscalculates 'seconds'. We recalculate it from the 'timestamp' string.
+        data = data.map(item => {
+            const timeStr = item.timestamp.replace(/[\[\]]/g, ''); // Remove brackets
+            const parts = timeStr.split(':');
+            let seconds = 0;
+            if (parts.length === 2) {
+                const mm = parseInt(parts[0], 10);
+                const ss = parseFloat(parts[1]);
+                seconds = mm * 60 + ss;
+            } else if (parts.length === 3) {
+                // Handle hh:mm:ss just in case
+                const hh = parseInt(parts[0], 10);
+                const mm = parseInt(parts[1], 10);
+                const ss = parseFloat(parts[2]);
+                seconds = hh * 3600 + mm * 60 + ss;
+            }
+
+            return {
+                ...item,
+                seconds: seconds > 0 ? seconds : item.seconds // Fallback if parse fails
+            };
+        });
+
+        return data;
 
     } catch (e) {
         console.error("Gemini Analysis Error:", e);
