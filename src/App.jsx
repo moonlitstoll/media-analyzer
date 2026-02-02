@@ -454,7 +454,7 @@ const generateHTML = (data, filename, mediaDataUrl) => {
                     
                     window.jumpTo = (i) => { 
                         if (transcriptData[i] && video) {
-                            loopingIdx = null; 
+                            if (loopingIdx !== null) loopingIdx = i;
                             // Ensure precise jump with small delay if needed
                             const targetTime = Math.max(0, transcriptData[i].seconds - 1.0);
                             window.seekTo(targetTime);
@@ -961,7 +961,7 @@ const App = () => {
 
   const jumpToSentence = useCallback((index) => {
     if (activeFile?.data && index >= 0 && index < activeFile.data.length) {
-      setLoopingSentenceIdx(null);
+      setLoopingSentenceIdx(prev => prev !== null ? index : null);
       seekTo(Math.max(0, activeFile.data[index].seconds - 1.0));
     }
   }, [seekTo, activeFile]);
