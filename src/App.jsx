@@ -1546,7 +1546,10 @@ const App = () => {
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
+          <div className="flex-1 flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in duration-300 relative">
+            <button onClick={() => setShowSettings(true)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors z-10">
+              <Settings size={24} />
+            </button>
             <div className="max-w-4xl w-full text-center space-y-10">
               <div className="space-y-4">
                 <div className="inline-flex items-center justify-center p-3 bg-indigo-50 rounded-2xl ring-1 ring-indigo-100 mb-2">
