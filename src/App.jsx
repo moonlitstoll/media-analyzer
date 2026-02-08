@@ -1064,6 +1064,61 @@ const App = () => {
   // Rate
   useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate; }, [playbackRate]);
 
+  // Media Session API
+  useEffect(() => {
+    if (!activeFile || !navigator.mediaSession) return;
+
+    // Update Metadata
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: activeFile.file.name,
+      artist: 'MediaSmart Analysis',
+      album: 'Transcript Playback',
+      artwork: [
+        { src: 'https://via.placeholder.com/96', sizes: '96x96', type: 'image/png' },
+        { src: 'https://via.placeholder.com/128', sizes: '128x128', type: 'image/png' },
+      ]
+    });
+
+    // Action Handlers
+    const actionHandlers = [
+      ['play', () => {
+        if (videoRef.current) videoRef.current.play();
+      }],
+      ['pause', () => {
+        if (videoRef.current) videoRef.current.pause();
+      }],
+      ['previoustrack', () => {
+        handlePrev(currentSentenceIdx);
+      }],
+      ['nexttrack', () => {
+        handleNext(currentSentenceIdx);
+      }],
+      ['seekto', (details) => {
+        if (videoRef.current && details.seekTime !== undefined) {
+          videoRef.current.currentTime = details.seekTime;
+        }
+      }],
+      ['seekbackward', (details) => {
+        if (videoRef.current) {
+          videoRef.current.currentTime = Math.max(videoRef.current.currentTime - (details.seekOffset || 10), 0);
+        }
+      }],
+      ['seekforward', (details) => {
+        if (videoRef.current) {
+          videoRef.current.currentTime = Math.min(videoRef.current.currentTime + (details.seekOffset || 10), videoRef.current.duration);
+        }
+      }]
+    ];
+
+    for (const [action, handler] of actionHandlers) {
+      try {
+        navigator.mediaSession.setActionHandler(action, handler);
+      } catch (error) {
+        console.warn(`The media session action "${action}" is not supported yet.`);
+      }
+    }
+  }, [activeFile, currentSentenceIdx, handleNext, handlePrev]);
+
   // Keyboard
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -1455,17 +1510,45 @@ const App = () => {
             <div className="flex-none bg-white border-t border-slate-200 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
               <div className="max-w-5xl mx-auto">
                 <div className="flex flex-row h-[80px] items-stretch">
-                  {/* Video (Square, Left) */}
+                  {/* Video/Audio Container (Square, Left) */}
                   <div className="relative bg-black h-full aspect-square flex-shrink-0 border-r border-slate-100 group">
-                    <video
-                      ref={videoRef}
-                      src={mediaUrl}
-                      className="w-full h-full object-contain"
-                      onClick={togglePlay}
-                      playsInline
-                      loop
-                    />
-                    {!isPlaying && (
+                    {activeFile?.file.type.startsWith('audio') ? (
+                      <div className="w-full h-full flex items-center justify-center bg-slate-900">
+                        <FileAudio size={48} className="text-slate-500" />
+                        <audio
+                          ref={videoRef}
+                          src={mediaUrl}
+                          className="hidden"
+                          onPlay={() => setIsPlaying(true)}
+                          onPause={() => setIsPlaying(false)}
+                          onEnded={() => {
+                            if (loopingSentenceIdxRef.current !== null) {
+                              const activeIdx = loopingSentenceIdxRef.current;
+                              const data = activeFile.data;
+                              if (data[activeIdx]) {
+                                videoRef.current.currentTime = Math.max(0, data[activeIdx].seconds - 1.0);
+                                videoRef.current.play();
+                              }
+                            } else {
+                              videoRef.current.currentTime = 0;
+                              videoRef.current.play();
+                            }
+                          }}
+                          playsInline
+                          loop={loopingSentenceIdx === null}
+                        />
+                      </div>
+                    ) : (
+                      <video
+                        ref={videoRef}
+                        src={mediaUrl}
+                        className="w-full h-full object-contain"
+                        onClick={togglePlay}
+                        playsInline
+                        loop={loopingSentenceIdx === null} // Native loop only if not sentence looping
+                      />
+                    )}
+                    {!isPlaying && activeFile?.file.type.startsWith('video') && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
                         <Play size={24} fill="white" className="text-white ml-0.5" />
                       </div>
