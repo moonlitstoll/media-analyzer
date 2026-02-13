@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import {
   Play, Pause, Rewind, FastForward,
   Eye, EyeOff, Languages, List, Search, Upload,
@@ -9,7 +9,37 @@ import {
 } from 'lucide-react';
 import { analyzeMedia } from './services/gemini';
 
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
 
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <h3 className="font-bold mb-2">Something went wrong.</h3>
+          <p className="text-sm font-mono whitespace-pre-wrap">{this.state.error?.toString()}</p>
+          <button onClick={() => this.setState({ hasError: false })} className="mt-3 px-3 py-1 bg-red-100 hover:bg-red-200 rounded text-xs font-bold transition-colors">
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 
 const TranscriptItem = memo(({
@@ -919,28 +949,30 @@ const App = () => {
                     <p>Analysis complete but no text found.</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {transcriptData.map((item, idx) => {
-                      const isActive = idx === currentSentenceIdx;
-                      return (
-                        <TranscriptItem
-                          key={idx}
-                          item={item}
-                          idx={idx}
-                          isActive={isActive}
-                          seekTo={seekTo}
-                          jumpToSentence={jumpToSentence}
-                          toggleLoop={() => toggleLoop(idx)}
-                          onPrev={() => handlePrev(idx)}
-                          onNext={() => handleNext(idx)}
-                          isLooping={loopingSentenceIdx === idx}
-                          isGlobalLooping={loopingSentenceIdxRef.current !== null}
-                          showAnalysis={showAnalysis}
-                          showTranslations={showTranslations}
-                          toggleGlobalAnalysis={() => setShowAnalysis(!showAnalysis)}
-                        />
-                      );
-                    })}
+                  <div className="space-y-4 min-h-[200px]">
+                    <ErrorBoundary>
+                      {transcriptData.map((item, idx) => {
+                        const isActive = idx === currentSentenceIdx;
+                        return (
+                          <TranscriptItem
+                            key={idx}
+                            item={item}
+                            idx={idx}
+                            isActive={isActive}
+                            seekTo={seekTo}
+                            jumpToSentence={jumpToSentence}
+                            toggleLoop={() => toggleLoop(idx)}
+                            onPrev={() => handlePrev(idx)}
+                            onNext={() => handleNext(idx)}
+                            isLooping={loopingSentenceIdx === idx}
+                            isGlobalLooping={loopingSentenceIdxRef.current !== null}
+                            showAnalysis={showAnalysis}
+                            showTranslations={showTranslations}
+                            toggleGlobalAnalysis={() => setShowAnalysis(!showAnalysis)}
+                          />
+                        );
+                      })}
+                    </ErrorBoundary>
                   </div>
                 )}
               </div>
