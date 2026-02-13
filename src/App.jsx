@@ -354,17 +354,19 @@ const App = () => {
 
     if (loopingSentenceIdx !== index) {
       if (activeFile?.data?.[index]) {
-        seekTo(Math.max(0, activeFile.data[index].seconds - 0.1)); // Small offset for loop start
+        // Transcript Time -> Audio Time: T - Offset
+        seekTo(Math.max(0, activeFile.data[index].seconds - syncOffset));
       }
     }
-  }, [loopingSentenceIdx, seekTo, activeFile]);
+  }, [loopingSentenceIdx, seekTo, activeFile, syncOffset]);
 
   const jumpToSentence = useCallback((index) => {
     if (activeFile?.data && index >= 0 && index < activeFile.data.length) {
       setLoopingSentenceIdx(null);
-      seekTo(Math.max(0, activeFile.data[index].seconds)); // Exact time
+      // Transcript Time -> Audio Time: T - Offset
+      seekTo(Math.max(0, activeFile.data[index].seconds - syncOffset));
     }
-  }, [seekTo, activeFile]);
+  }, [seekTo, activeFile, syncOffset]);
 
   const handlePrev = useCallback((currentIndex) => {
     if (activeFile?.data?.length) {
@@ -415,12 +417,18 @@ const App = () => {
       const activeIdx = loopingSentenceIdxRef.current;
       const data = activeFile.data;
 
+      // Check loop based on Synced Time
       if (activeIdx !== null && data.length > 0) {
+        // Transcript start/end times
         const start = data[activeIdx].seconds;
-        const end = activeIdx < data.length - 1 ? data[activeIdx + 1].seconds : v.duration;
-        if (now >= end - 0.1) {
-          // Loop restart with small offset
-          v.currentTime = Math.max(0, start);
+        const end = activeIdx < data.length - 1 ? data[activeIdx + 1].seconds : 999999;
+
+        // Convert Audio Time 'now' to Transcript Time
+        const syncedNow = now + syncOffset;
+
+        if (syncedNow >= end - 0.1) {
+          // Restart loop: Go to Audio Time corresponding to Transcript Start
+          v.currentTime = Math.max(0, start - syncOffset);
           v.play();
         }
       }
@@ -434,7 +442,7 @@ const App = () => {
         const activeIdx = loopingSentenceIdxRef.current;
         const data = activeFile.data;
         if (data[activeIdx]) {
-          v.currentTime = Math.max(0, data[activeIdx].seconds);
+          v.currentTime = Math.max(0, data[activeIdx].seconds - syncOffset);
           v.play();
         }
       } else {
@@ -450,7 +458,7 @@ const App = () => {
       v.removeEventListener('pause', null);
       v.removeEventListener('ended', null);
     };
-  }, [mediaUrl, activeFile]);
+  }, [mediaUrl, activeFile, syncOffset]);
 
   // Rate
   useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate; }, [playbackRate]);
@@ -464,9 +472,10 @@ const App = () => {
       if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
 
       const now = videoRef.current ? videoRef.current.currentTime : 0;
+      const syncedNow = now + syncOffset; // Sync awareness
       const data = activeFile.data;
       const currentIdx = data.findIndex((item, idx) =>
-        now >= item.seconds && (idx === data.length - 1 || now < data[idx + 1].seconds)
+        syncedNow >= item.seconds && (idx === data.length - 1 || syncedNow < data[idx + 1].seconds)
       );
 
       switch (e.code) {
@@ -491,7 +500,7 @@ const App = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mediaUrl, activeFile, togglePlay, toggleLoop, handlePrev, handleNext]);
+  }, [mediaUrl, activeFile, togglePlay, toggleLoop, handlePrev, handleNext, syncOffset]);
 
   // File Handling
   const processFiles = async (fileList) => {
@@ -935,7 +944,9 @@ return (
 
                   {/* Row 1: Time & Progress */}
                   <div className="flex items-center gap-3 text-[11px] font-mono font-bold text-slate-500">
-                    <span className="w-10 shrink-0">{new Date(currentTime * 1000).toISOString().substr(14, 5)}</span>
+                    <span className="w-10 shrink-0 text-indigo-600">
+                      {new Date(Math.max(0, currentTime + syncOffset) * 1000).toISOString().substr(14, 5)}
+                    </span>
 
                     <div
                       className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden cursor-pointer group relative"
