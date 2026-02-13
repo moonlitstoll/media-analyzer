@@ -55,55 +55,7 @@ const TranscriptItem = memo(({
           >
             <Play size={10} fill="currentColor" /> {item.timestamp}
           </button>
-
-          {/* Control Group */}
-          <div className={`flex items-center gap-1 transition-opacity duration-200 ${isActive || isLooping ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-
-            <button
-              onClick={(e) => { e.stopPropagation(); onPrev(); }}
-              className="p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
-              title="Previous Sentence"
-            >
-              <ChevronLeft size={16} />
-            </button>
-
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleLoop(idx); }}
-              className={`p-2 rounded-full transition-all ${isLooping ? 'bg-orange-100 text-orange-600 ring-2 ring-orange-200' : 'text-slate-400 hover:bg-slate-100 hover:text-indigo-600'}`}
-              title="Repeat Sentence"
-            >
-              <Repeat size={16} />
-            </button>
-
-            <button
-              onClick={() => jumpToSentence(idx)}
-              className="p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
-              title="Play from here"
-            >
-              <Play size={16} fill={isActive ? "currentColor" : "none"} />
-            </button>
-
-            <button
-              onClick={(e) => { e.stopPropagation(); onNext(); }}
-              className="p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
-              title="Next Sentence"
-            >
-              <ChevronRight size={16} />
-            </button>
-
-            {/* Quick Sync Button */}
-            <button
-              onClick={(e) => { e.stopPropagation(); onQuickSync(item.seconds); }}
-              className={`p-2 rounded-full transition-all text-slate-300 hover:text-red-500 hover:bg-red-50 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-              title="Sync Here: Match audio to this line"
-            >
-              <Gauge size={16} />
-            </button>
-
-          </div>
         </div>
-
-        {/* Main Text */}
         <div
           onClick={() => jumpToSentence(idx)}
           className={`
@@ -401,10 +353,17 @@ const App = () => {
       if (activeIdx !== null && data.length > 0) {
         // Transcript start/end times with BUFFER
         const start = Math.max(0, data[activeIdx].seconds - BUFFER_SECONDS);
-        // End is next item start + buffer, or end of file
-        const end = (activeIdx < data.length - 1 ? data[activeIdx + 1].seconds : 999999) + BUFFER_SECONDS;
 
-        if (now >= end - 0.1) {
+        // End is next item start + buffer, OR video duration if it's the last item
+        let end;
+        if (activeIdx < data.length - 1) {
+          end = data[activeIdx + 1].seconds + BUFFER_SECONDS;
+        } else {
+          end = v.duration + BUFFER_SECONDS; // Ensure we cover up to the very end
+        }
+
+        // Trigger loop if we passed the end OR if video ended (for last sentence)
+        if (now >= end - 0.1 || (v.ended && activeIdx === data.length - 1)) {
           // Restart loop
           v.currentTime = start;
           v.play();
