@@ -909,9 +909,9 @@ const App = () => {
             <History size={20} />
           </button>
 
-          {/* Settings Button */}
+          {/* Settings Button -> Now History/Cache */}
           <button
-            onClick={() => setShowSettings(true)}
+            onClick={() => setShowCacheHistory(true)}
             className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <Settings size={20} />
@@ -1199,8 +1199,8 @@ const App = () => {
       {
         showCacheHistory && (
           <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 max-h-[80vh] flex flex-col">
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="bg-indigo-50 p-2 rounded-xl">
                     <History size={20} className="text-indigo-600" />
@@ -1210,9 +1210,18 @@ const App = () => {
                     <p className="text-xs text-slate-500 font-medium">Load previous analysis results</p>
                   </div>
                 </div>
-                <button onClick={() => setShowCacheHistory(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
-                  <X size={20} className="text-slate-400" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setShowCacheHistory(false); setShowSettings(true); }}
+                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                    title="API Key Settings"
+                  >
+                    <Settings size={20} />
+                  </button>
+                  <button onClick={() => setShowCacheHistory(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+                    <X size={20} className="text-slate-400" />
+                  </button>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -1230,7 +1239,7 @@ const App = () => {
                         className="group flex items-center justify-between p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-100 rounded-2xl transition-all cursor-pointer"
                         onClick={() => loadCache(key)}
                       >
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div className="p-2 bg-white rounded-lg shadow-sm group-hover:text-indigo-600">
                             <BookOpen size={16} />
                           </div>
@@ -1239,7 +1248,16 @@ const App = () => {
                             <p className="text-[10px] text-slate-400 font-mono">CACHED VERSION</p>
                           </div>
                         </div>
-                        <ChevronRight size={18} className="text-slate-300 group-hover:text-indigo-400 transition-colors" />
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteCache(key); }}
+                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                          <ChevronRight size={18} className="text-slate-300 group-hover:text-indigo-400 transition-colors" />
+                        </div>
                       </div>
                     );
                   })
