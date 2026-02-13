@@ -195,39 +195,6 @@ const App = () => {
   const mediaUrl = activeFile?.url || null;
   const isAnalyzing = activeFile?.isAnalyzing || false;
 
-  // --- CHUNKED RENDERING STATE ---
-  const [displayedLimit, setDisplayedLimit] = useState(20);
-  const observerTarget = useRef(null);
-
-  // Reset limit active file changes
-  useEffect(() => {
-    setDisplayedLimit(20);
-  }, [activeFileId]);
-
-  // Auto-expand limit if active sentence is near or beyond current limit
-  useEffect(() => {
-    if (activeSentenceIdx !== -1 && activeSentenceIdx >= displayedLimit - 5) {
-      setDisplayedLimit(prev => Math.min(Math.max(prev, activeSentenceIdx + 20), transcriptData.length));
-    }
-  }, [activeSentenceIdx, transcriptData.length]); // intended: update when activeIdx changes
-
-  // Infinite Scroll Observer
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0].isIntersecting && displayedLimit < transcriptData.length) {
-          setDisplayedLimit(prev => Math.min(prev + 20, transcriptData.length));
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
-    return () => observer.disconnect();
-  }, [displayedLimit, transcriptData.length]);
 
 
 
@@ -244,11 +211,31 @@ const App = () => {
 
   // Helper: Sanitize & Sort Data
   const sanitizeData = (data) => {
-    if (!Array.isArray(data)) return [];
-    return data.map(item => ({
-      ...item,
-      seconds: typeof item.seconds === 'number' ? item.seconds : parseTime(item.timestamp)
-    })).sort((a, b) => a.seconds - b.seconds);
+    if (!Array.isArray(data)) {
+      console.error("Data is not an array:", data);
+      return [];
+    }
+    return data
+      .filter(item => item && typeof item === 'object') // Filter null/non-objects
+      .map(item => {
+        let seconds = 0;
+        if (typeof item.seconds === 'number') {
+          seconds = item.seconds;
+        } else if (typeof item.timestamp === 'string') {
+          seconds = parseTime(item.timestamp);
+        }
+
+        return {
+          ...item,
+          seconds: isNaN(seconds) ? 0 : seconds,
+          text: item.text || "(No text)",
+          translation: item.translation || "",
+          words: Array.isArray(item.words) ? item.words : [],
+          patterns: Array.isArray(item.patterns) ? item.patterns : []
+        };
+      })
+      .filter(item => item.text !== "(No text)") // Optional: remove empty text items if desired
+      .sort((a, b) => a.seconds - b.seconds);
   };
 
   // Sync ref
@@ -584,8 +571,20 @@ const App = () => {
           setFiles(prev => prev.map(p => p.id === fItem.id ? { ...p, data: data, isAnalyzing: false } : p));
         } else {
           // No cache -> Call API
-          const rawData = await analyzeMedia(fItem.file, apiKey);
-          const data = sanitizeData(rawData); // Sort & Sanitize BEFORE CACHING
+          let rawData;
+          try {
+            rawData = await analyzeMedia(fItem.file, apiKey);
+          } catch (apiError) {
+            throw new Error(`API Error: ${apiError.message}`);
+          }
+
+          if (!rawData) throw new Error("Received empty data from API");
+
+          const data = sanitizeData(rawData); // Sort & Sanitize
+
+          if (data.length === 0) {
+            throw new Error("Analysis returned no valid text data.");
+          }
 
           // Save to Cache (Sorted)
           try {
@@ -598,7 +597,7 @@ const App = () => {
         }
       } catch (err) {
         console.error("Analysis Error", err);
-        setFiles(prev => prev.map(p => p.id === fItem.id ? { ...p, error: err.message, isAnalyzing: false } : p));
+        setFiles(prev => prev.map(p => p.id === fItem.id ? { ...p, error: "Analysis failed: " + err.message, isAnalyzing: false } : p));
       }
     });
   };
@@ -921,7 +920,7 @@ const App = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {transcriptData.slice(0, displayedLimit).map((item, idx) => {
+                    {transcriptData.map((item, idx) => {
                       const isActive = idx === currentSentenceIdx;
                       return (
                         <TranscriptItem
@@ -939,16 +938,9 @@ const App = () => {
                           showAnalysis={showAnalysis}
                           showTranslations={showTranslations}
                           toggleGlobalAnalysis={() => setShowAnalysis(!showAnalysis)}
-                          onQuickSync={() => { /* Removed */ }}
                         />
                       );
                     })}
-                    {/* Sentinel for Infinite Scroll */}
-                    {displayedLimit < transcriptData.length && (
-                      <div ref={observerTarget} className="h-10 w-full flex items-center justify-center p-4">
-                        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
