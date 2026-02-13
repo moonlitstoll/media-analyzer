@@ -22,9 +22,9 @@ const TranscriptItem = memo(({
   const itemRef = useRef(null);
 
   useEffect(() => {
-    // Scroll to CENTER of the view for better context
+    // Scroll to START (Top) as per Unified Engine requirements
     if (isActive && itemRef.current && !isGlobalLooping) {
-      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [isActive, isGlobalLooping, showAnalysis]);
 
@@ -410,13 +410,14 @@ const App = () => {
     };
 
     const onSeek = () => {
-      // Immediate sync on seek
-      const idx = findActiveIndex(v.currentTime, activeFile.data);
-      if (idx !== -1) {
+      // High-Precision Snapshot Scan on Seek/Scrub (Unified Engine)
+      const now = v.currentTime;
+      const idx = findActiveIndex(now, activeFile.data);
+      if (idx !== -1 && idx !== activeIdxRef.current) {
         activeIdxRef.current = idx;
         setActiveSentenceIdx(idx);
       }
-      setCurrentTime(v.currentTime);
+      setCurrentTime(now);
     };
 
     v.addEventListener('play', onPlay);
