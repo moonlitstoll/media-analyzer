@@ -302,6 +302,10 @@ const App = () => {
   };
 
   const loadCache = (key) => {
+    // FORCE RESET
+    resetPlayerState();
+    setIsSwitchingFile(true);
+
     const cachedData = localStorage.getItem(key);
     if (cachedData) {
       try {
@@ -325,10 +329,12 @@ const App = () => {
         setActiveFileId(id);
         setShowSettings(false);
         setShowCacheHistory(false);
-        alert(`Loaded analysis for: ${name}\nNote: Media playback requires re-selecting the file.`);
+        // Alert removed for smoother check
+        // alert(`Loaded analysis for: ${name}\nNote: Media playback requires re-selecting the file.`);
       } catch (e) {
         console.error("Failed to load cache:", e);
         alert("Failed to load cached data.");
+        setIsSwitchingFile(false);
       }
     }
   };
@@ -785,49 +791,7 @@ const App = () => {
           </div>
         )}
 
-        {/* Cache History Popup */}
-        {showCacheHistory && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md animate-in zoom-in duration-300 relative">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2"><History size={20} /> Analysis History</h3>
-                <button onClick={() => setShowCacheHistory(false)}><X size={20} className="text-slate-400 hover:text-slate-600" /></button>
-              </div>
 
-              <div className="space-y-2 max-h-[60vh] overflow-y-auto mb-3 pr-1 bg-slate-50/50 rounded-lg p-1">
-                {cacheKeys.length === 0 ? (
-                  <p className="text-sm text-slate-400 text-center py-8">No history found.</p>
-                ) : (
-                  cacheKeys.map(key => {
-                    const name = key.replace('gemini_analysis_', '').replace(/_\d+$/, '');
-                    return (
-                      <div
-                        key={key}
-                        onClick={() => loadCache(key)}
-                        className="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-xl shadow-sm hover:border-indigo-300 hover:bg-slate-50 transition-all cursor-pointer group/item"
-                      >
-                        <span className="text-sm font-medium text-slate-700 truncate flex-1 mr-4">{name}</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); deleteCache(key); }}
-                          className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              {cacheKeys.length > 0 && (
-                <button onClick={clearAllCache} className="w-full py-2 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 font-bold rounded-xl flex items-center justify-center gap-2 text-sm transition-colors">
-                  <Trash2 size={14} /> Clear History
-                </button>
-              )}
-            </div>
-          </div>
-        )}
 
         <div className="max-w-4xl w-full text-center space-y-10 animate-in fade-in zoom-in duration-500">
           <div className="space-y-4">
@@ -1319,6 +1283,17 @@ const App = () => {
               <div className="flex-1 overflow-hidden flex flex-col bg-slate-50/50">
                 {/* Visual Header / Controls */}
                 <div className="p-4 sm:p-6 space-y-4">
+                  {/* Header */}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                      <List size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900">File & Analysis Management</h3>
+                      <p className="text-xs text-slate-500">Manage transcripts and files</p>
+                    </div>
+                  </div>
+
                   {/* Upload Button */}
                   <div className="relative">
                     <label
@@ -1382,12 +1357,12 @@ const App = () => {
                           <div
                             key={key}
                             className={`
-                              group flex items-center justify-between p-4 rounded-2xl border
+                              group flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all
                               ${isActive
                                 ? 'bg-indigo-50 border-indigo-200 shadow-md shadow-indigo-100'
-                                : 'bg-white border-slate-200'}
+                                : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}
                             `}
-                          // onClick={() => loadCache(key)} // Load disabled
+                            onClick={() => loadCache(key)}
                           >
                             <div className="flex items-center gap-4 min-w-0 flex-1">
                               <div className={`p-3 rounded-xl ${isActive ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
