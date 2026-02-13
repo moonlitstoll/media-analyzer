@@ -25,7 +25,7 @@ const TranscriptItem = ({
     if (isActive && itemRef.current && !isGlobalLooping) {
       itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [isActive, isGlobalLooping]);
+  }, [isActive, isGlobalLooping, showAnalysis]);
 
   return (
     <div
@@ -212,7 +212,7 @@ const App = () => {
   // Derived current sentence index
   const currentSentenceIdx = useMemo(() => {
     if (!transcriptData || transcriptData.length === 0) return -1;
-    const adjustedNow = currentTime + 1.0;
+    const adjustedNow = currentTime;
     return transcriptData.findIndex((item, idx) =>
       adjustedNow >= item.seconds && (idx === transcriptData.length - 1 || adjustedNow < transcriptData[idx + 1].seconds)
     );
