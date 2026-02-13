@@ -17,16 +17,24 @@ const TranscriptItem = memo(({
   seekTo, jumpToSentence, toggleLoop,
   onPrev, onNext,
   isLooping, showAnalysis, toggleGlobalAnalysis,
-  showTranslations, // New prop
+  showTranslations,
   onQuickSync
 }) => {
   const itemRef = useRef(null);
 
+  // 1. Smooth Auto-Scroll on Active Change (Playback)
   useEffect(() => {
     if (isActive && itemRef.current && !isGlobalLooping) {
       itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [isActive, isGlobalLooping, showAnalysis]);
+  }, [isActive, isGlobalLooping]);
+
+  // 2. Instant Scroll Anchoring on Layout Change (Toggle Analysis)
+  useLayoutEffect(() => {
+    if (isActive && itemRef.current) {
+      itemRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
+    }
+  }, [showAnalysis]);
 
   return (
     <div
@@ -927,16 +935,16 @@ const App = () => {
                   </div>
 
                   {/* Controls (Right, Flex Column) */}
-                  <div className="flex-1 px-4 py-2 flex flex-col justify-center gap-1.5 min-w-0 bg-white relative">
+                  <div className="flex-1 px-4 py-3 flex flex-col justify-center gap-2 min-w-0 bg-white relative">
 
                     {/* Row 1: Time & Progress */}
                     <div className="flex items-center gap-3 text-[11px] font-mono font-bold text-slate-500">
-                      <span className="w-10 shrink-0 text-indigo-600">
+                      <span className="w-12 shrink-0 text-indigo-600">
                         {new Date(Math.max(0, currentTime) * 1000).toISOString().substr(14, 5)}
                       </span>
 
                       <div
-                        className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden cursor-pointer group relative"
+                        className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden cursor-pointer group relative"
                         onClick={(e) => {
                           const rect = e.currentTarget.getBoundingClientRect();
                           seekTo(((e.clientX - rect.left) / rect.width) * videoRef.current.duration);
@@ -944,24 +952,24 @@ const App = () => {
                       >
                         <div className="absolute inset-0 w-full h-full hover:bg-slate-200/50 transition-colors" />
                         <div
-                          className="h-full bg-indigo-500 rounded-full relative group-hover:bg-indigo-600 transition-colors"
+                          className="h-full bg-indigo-500 rounded-full relative group-hover:bg-indigo-600 transition-colors shadow-[0_0_8px_rgba(99,102,241,0.5)]"
                           style={{ width: `${videoRef.current?.duration ? (currentTime / videoRef.current.duration) * 100 : 0}%` }}
                         />
                       </div>
 
-                      <span className="w-10 shrink-0 text-right">{videoRef.current?.duration ? new Date(videoRef.current.duration * 1000).toISOString().substr(14, 5) : "00:00"}</span>
+                      <span className="w-12 shrink-0 text-right">{videoRef.current?.duration ? new Date(videoRef.current.duration * 1000).toISOString().substr(14, 5) : "00:00"}</span>
                     </div>
 
-                    {/* Row 2: Main Buttons (Responsive & Spaced) */}
-                    <div className="flex items-center justify-evenly mt-2 gap-1 sm:gap-2">
+                    {/* Row 2: Main Buttons (Redesigned & Responsive) */}
+                    <div className="flex items-center justify-around mt-1 gap-1 sm:gap-4">
 
                       {/* 1. Speed Button */}
-                      <div className="relative">
+                      <div className="relative flex-shrink-0">
                         <button
                           onClick={(e) => { e.stopPropagation(); setShowSpeedMenu(!showSpeedMenu); }}
                           className={`
-                            flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[55px] sm:min-w-[65px]
-                            ${showSpeedMenu ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}
+                            flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[60px] sm:min-w-[75px] shadow-sm
+                            ${showSpeedMenu ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}
                           `}
                         >
                           <Gauge size={14} /> {playbackRate.toFixed(1)}x
@@ -993,37 +1001,42 @@ const App = () => {
                         )}
                       </div>
 
-                      {/* 2. Hide Translation (Eye) */}
+                      {/* 2. Global Analysis Toggle (Eye) */}
                       <button
-                        onClick={() => setShowTranslations(!showTranslations)}
-                        className={`p-2 sm:p-2.5 rounded-xl transition-all active:scale-95 ${showTranslations ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:bg-slate-100'}`}
-                        title={showTranslations ? "Hide Translations" : "Show Translations"}
+                        onClick={() => setShowAnalysis(!showAnalysis)}
+                        className={`
+                          p-2 sm:p-3 rounded-2xl flex-shrink-0 transition-all active:scale-95 shadow-sm border
+                          ${showAnalysis
+                            ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                            : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50'}
+                        `}
+                        title={showAnalysis ? "Hide All Descriptions" : "Show All Descriptions"}
                       >
-                        {showTranslations ? <Eye size={20} /> : <EyeOff size={20} />}
+                        {showAnalysis ? <Eye size={22} className="stroke-[2.5]" /> : <EyeOff size={22} />}
                       </button>
 
                       {/* 3. Prev */}
                       <button
                         onClick={() => handlePrev(currentSentenceIdx !== -1 ? currentSentenceIdx : 0)}
-                        className="p-1 sm:p-2 text-slate-400 hover:text-indigo-600 active:scale-75 transition-all"
+                        className="p-1 sm:p-2 flex-shrink-0 text-slate-400 hover:text-indigo-600 active:scale-75 transition-all"
                       >
-                        <SkipBack size={24} />
+                        <SkipBack size={26} />
                       </button>
 
-                      {/* 4. Play/Pause (Largest) */}
+                      {/* 4. Play/Pause (Primary Action) */}
                       <button
                         onClick={togglePlay}
-                        className="w-12 h-12 sm:w-14 sm:h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-90 transition-all"
+                        className="w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[20px] flex items-center justify-center shadow-lg shadow-indigo-500/40 active:scale-90 transition-all ring-4 ring-indigo-50"
                       >
-                        {isPlaying ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" className="ml-1" />}
+                        {isPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1" />}
                       </button>
 
                       {/* 5. Next */}
                       <button
                         onClick={() => handleNext(currentSentenceIdx !== -1 ? currentSentenceIdx : 0)}
-                        className="p-1 sm:p-2 text-slate-400 hover:text-indigo-600 active:scale-75 transition-all"
+                        className="p-1 sm:p-2 flex-shrink-0 text-slate-400 hover:text-indigo-600 active:scale-75 transition-all"
                       >
-                        <SkipForward size={24} />
+                        <SkipForward size={26} />
                       </button>
 
                       {/* 6. Sentence Loop (Repeat) */}
@@ -1034,12 +1047,14 @@ const App = () => {
                           }
                         }}
                         className={`
-                          p-2 sm:p-2.5 rounded-xl transition-all active:scale-95
-                          ${loopingSentenceIdx !== null ? 'bg-amber-100 text-amber-600 shadow-sm' : 'text-slate-400 hover:bg-slate-100'}
+                          p-2 sm:p-3 rounded-2xl flex-shrink-0 transition-all active:scale-95 shadow-sm border
+                          ${loopingSentenceIdx !== null
+                            ? 'bg-amber-100 text-amber-600 border-amber-200'
+                            : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50'}
                         `}
                         title="Loop Current Sentence"
                       >
-                        <Repeat size={20} className={loopingSentenceIdx !== null ? 'animate-spin-slow' : ''} />
+                        <Repeat size={22} className={loopingSentenceIdx !== null ? 'animate-spin-slow' : ''} />
                       </button>
 
                     </div>
