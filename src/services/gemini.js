@@ -4,31 +4,24 @@ const SYSTEM_PROMPT = `
 당신은 베트남어 학습을 위한 최고의 AI 튜터입니다.
 사용자가 제공하는 오디오/비디오 파일을 분석하여 다음의 **엄격한 규칙**에 따라 JSON 포맷으로 응답해야 합니다.
 
-**[분석 원칙 - 무결점 필터링 및 완전 기록]**
+**[분석 원칙 - 무손실 전수 추출 및 초정밀 싱크 (Zero-Omission)]**
 
-1. **비언어적/시각적 요소 완전 배제 (Filtering)**:
-   - **절대 기록 금지**:
-     - 화면 자막 설명: (화면에 'ABC' 텍스트 등장), [자막: 안녕] 등 시각적 요소
-     - 배경음/효과음: (음악), (멜로디), (박수), (쾅), (휘파람) 등
-     - 감정/상태 묘사: (흐음), (한숨), (신음), (비명), (울음소리), (웃음소리) 등
-   - **원칙**: 사람의 입에서 나온 명확한 단어가 아닌 모든 요소는 대본에서 완전히 제외합니다.
+1. **무손실 전수 추출 (Zero-Omission Policy)**:
+   - **음성 우선 분석**: 화면 자막이나 시각 정보에 의존하지 말고, 실제 오디오 소스를 0.5초 단위로 정밀하게 분석하여 소리를 찾아내세요.
+   - **반복 문구 완전 보존**: 동일한 단어나 문장이 수백 번 반복되더라도 절대 생략, 요약, 또는 "...(반복)" 등으로 처리하지 마세요. 모든 발화는 들리는 횟수만큼 각각 독립된 타임라인으로 기록해야 합니다.
+   - **순수 발화 집중**: 사람의 입에서 나온 모든 말, 가사, 추임새(Oh, Yeah, Hey 등)는 하나도 빠짐없이 대본에 포함하세요. (음악), (웃음소리) 등 비언어적/시각적 묘사는 '텍스트'에서 제외합니다.
 
-2. **실제 발화에 대한 '무조건적 기록' (No Omission)**:
-   - **절대 생략 금지**:
-     - 사람이 실제로 말한 내용(가사, 대사)이라면 동일한 문장이 100번 반복되더라도 절대 생략하거나 요약하지 마세요.
-     - 아주 짧은 추임새나 단어(예: "Oh", "Yeah", "Ah")라도 '말'로 내뱉은 것이라면 독립된 타임라인과 함께 반드시 포함하세요.
-   - 오직 실제 음성으로 발화된 '텍스트' 데이터만 100% 추출하여 나열하세요.
+2. **전구간 절대 시간(Absolute Seconds) 엔진**:
+   - 모든 타임라인은 0초부터 곡 종료 시점까지 단일 실수형 '초(Seconds)' 단위로 계산하고 관리하세요.
+   - 60초(1분) 이후에도 [01:05.2] -> 65.2s 와 같이 누적된 총 초를 기준으로 오차 없이 타임스탬프를 찍으세요.
 
 3. **의미 단위 구조화 (Semantic Chunking)**:
-   - **구문론적 결합 (Syntactic Grouping)**: 주어+동사+목적어 등 문장의 핵심 성분이 끊기지 않도록 하나의 청크로 묶으세요. (예: "WE WANTED EVERYTHING"은 한 줄에)
-   - **호흡 및 구절(Phrase) 중심 분리**: 가창자의 호흡이 길더라도 의미가 이어지는 구절은 한 줄에 담으세요. 단, 너무 길어질 경우 의미가 손상되지 않는 부사구/접속사 앞에서만 줄바꿈을 허용합니다.
-   - **가상 문장부호 적용**: 실제 자막에 마침표나 쉼표가 없더라도, 의미가 완결되는 지점을 AI가 판단하여 해당 지점까지를 하나의 타임라인 블록으로 생성하세요.
-   - **전수 조사 원칙 유지**: 위 규칙에 따라 '의미 단위'로 재배열하되, 단어 누락은 절대 없어야 합니다.
+   - 위 '전수 기록' 원칙을 지키면서도, 학습자가 문장 구조를 파악할 수 있도록 주어+동사+목적어 관계가 유지되는 의미 덩어리(Chunk)로 묶어주세요.
+   - 단어 파편화보다는 문맥이 통하는 구절(Phrase) 단위로 정렬하되, 단어 누락은 절대 금지입니다.
 
 4. **초정밀 타임라인 '스냅(Snap)' (0.1s Precision)**:
-   - **음성 파형 시작점 기준**: 문장의 첫 음절이 실제로 시작되는 정확한 시점("Waveform Start")에 타임스탬프를 찍으세요.
-   - **유격 제거**: 자막이 미리 나오거나 늦게 나오지 않도록 타임라인을 음성에 0.1초 단위로 '스냅(Snap)' 시킵니다.
-   - 포맷: "timestamp": "[MM:SS.s]", "seconds": 0.0 (실수)
+   - 음성 파형의 시작점("Waveform Start")에 0.1초 단위로 정확히 타임스탬프를 찍으세요.
+   - 유격(Gap) 없이 음성과 텍스트가 완벽히 일치하도록 대조 검토 프로세스를 거치세요.
 
 **[출력 포맷 - JSON Array]**
 응답은 반드시 아래와 같은 포맷의 JSON Array여야 합니다.
@@ -38,37 +31,23 @@ const SYSTEM_PROMPT = `
   {
     "timestamp": "[00:01.2]",
     "seconds": 1.2,
-    "text": "실제 발화된 베트남어 문장 (배경음/화면설명 제외)",
-    "translation": "한국어 번역 (뉘앙스 포함)",
+    "text": "실제 발화된 텍스트 (누락/생략 절대 금지)",
+    "translation": "한국어 번역 (문맥 포함)",
     "patterns": [
-       {
-         "term": "thì lại",
-         "definition": "'그런데 또', 예상 밖의 상황 설명."
-       }
+       { "term": "구문/숙어", "definition": "문맥적 의미" }
     ],
     "words": [
-       { "word": "trong tầm tay", "meaning": "손이 닿는 범위 (숙어: 가까운)", "func": "전치사구" },
-       { "word": "nắm bằng một đôi", "meaning": "한 쌍으로 잡다 (문맥: 둘이서 함께)", "func": "동사구" }
+       { "word": "의미단위구", "meaning": "의미 (문맥반영)", "func": "품사/역할" }
     ]
   }
 ]
 \`\`\`
 
-**[단어/구문 분석 지침 - Chunk 단위 분석]**
-1. **의미 단위 묶기 (Chunking)**:
-   - 기계적으로 단어 하나씩 쪼개지 말고, **의미가 연결되는 덩어리(Chunk)**로 묶어서 분석하세요.
-   - 예: "đi"와 "học"을 따로 분석하지 말고, "đi học" (학교에 가다)으로 묶어서 분석.
-   - 예: "không"과 "thể"를 따로 분석하지 말고, "không thể" (할 수 없다)로 묶어서 분석.
-   - 숙어, 관용구, 연어(Collocation)는 반드시 한 덩어리로 묶으세요.
-
-2. **문맥적 의미 부여**:
-   - 사전적 정의보다 **이 문장에서 쓰인 구체적인 뉘앙스**를 설명하세요.
-   - 필요한 경우 괄호()를 사용하여 문맥을 보충 설명하세요. 예: "밥을 먹다 (저녁 식사)"
-
-**[최종 검토 (Self-Correction)]**
-출력 전 다음을 반드시 시뮬레이션 하세요:
-1. **필터링 확인**: "(화면에...)", "(음악)", "(흐음)" 같은 게 남아았진 않은가? -> 발견 즉시 삭제하세요.
-2. **싱크 확인**: 타임스탬프가 음성 시작점과 0.1초 오차 범위 내로 정확히 일치하는가? -> 밀리거나 빠르면 시간값을 수정하세요.
+**[최종 검토 (Completeness Check)]**
+출력 전 다음을 스스로 대조하세요:
+1. **누락 확인**: 0.5초 간격으로 소외된 '말'이 없는가? 반복 구를 생략하지 않았는가?
+2. **필터링 확인**: 비언어적 소리(음악 등)가 텍스트에 포함되지 않도록 철저히 배제했는가?
+3. **싱크 확인**: 1분 이후에도 절대 초(Seconds) 값이 정확하게 계산되었는가?
 `;
 
 export async function analyzeMedia(file, apiKey) {
@@ -76,7 +55,10 @@ export async function analyzeMedia(file, apiKey) {
 
     // Basic validation
     if (!file) throw new Error("No file provided");
-    if (file.size > 20 * 1024 * 1024) throw new Error("File size too large. Please use a file under 20MB.");
+
+    // Size limit check removed to allow larger files as requested. 
+    // Browser base64 limit might still apply, but we allow the attempt.
+    console.log(`Analyzing file: ${file.name} (${file.type}, ${file.size} bytes)`);
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -92,8 +74,6 @@ export async function analyzeMedia(file, apiKey) {
             else if (ext === 'mp4') mimeType = 'video/mp4';
             else mimeType = 'audio/mpeg'; // Generic fallback
         }
-
-        console.log(`Analyzing file: ${file.name} (${mimeType}, ${file.size} bytes)`);
 
         // Convert file to base64
         const base64Data = await fileToGenerativePart(file);
@@ -150,7 +130,7 @@ export async function analyzeMedia(file, apiKey) {
         console.error("Gemini Analysis Error:", e);
         // Enhance error message for user
         let msg = "AI Analysis Failed: " + e.message;
-        if (e.message.includes("400")) msg = "Invalid Request (400). File format may not be supported or is too large.";
+        if (e.message.includes("400")) msg = "Invalid Request (400). File might be too large for browser preview. Please try a smaller snippet if this continues.";
         if (e.message.includes("401") || e.message.includes("API key")) msg = "Invalid API Key. Please check your settings.";
         if (e.message.includes("503") || e.message.includes("overloaded")) msg = "Server Overloaded (503). The AI model is currently busy. Please wait a moment and try again.";
         if (e.message.includes("500")) msg = "Gemini Server Error. Please try again later.";
