@@ -190,7 +190,7 @@ const TranscriptItem = memo(({
 const App = () => {
   const [apiKey, setApiKey] = useState(localStorage.getItem('miniapp_gemini_key') || '');
   const [showSettings, setShowSettings] = useState(false);
-  const [syncOffset, setSyncOffset] = useState(0); // Sync calibration in seconds
+  const BUFFER_SECONDS = 0.8; // Audio Buffer (0.8s)
 
   // Multi-file state
   const [files, setFiles] = useState([]);
@@ -223,14 +223,11 @@ const App = () => {
   // Derived current sentence index
   const currentSentenceIdx = useMemo(() => {
     if (!transcriptData || transcriptData.length === 0) return -1;
-    // Apply Sync Offset: Transcript Time = Player Time + Offset
-    // If Audio is at 2:30 (150s) and Transcript is at 1:50 (110s), Offset should be -40s.
-    // adjustedNow = 150 + (-40) = 110. Matches Transcript.
-    const adjustedNow = currentTime + syncOffset;
+    // Strict timeline for display (0.1s snap prompt), Playback uses buffer.
     return transcriptData.findIndex((item, idx) =>
-      adjustedNow >= item.seconds && (idx === transcriptData.length - 1 || adjustedNow < transcriptData[idx + 1].seconds)
+      currentTime >= item.seconds && (idx === transcriptData.length - 1 || currentTime < transcriptData[idx + 1].seconds)
     );
-  }, [transcriptData, currentTime, syncOffset]);
+  }, [transcriptData, currentTime]);
 
   // Helper: Parse MM:SS.ms to seconds
   const parseTime = (timeStr) => {
@@ -354,19 +351,19 @@ const App = () => {
 
     if (loopingSentenceIdx !== index) {
       if (activeFile?.data?.[index]) {
-        // Transcript Time -> Audio Time: T - Offset
-        seekTo(Math.max(0, activeFile.data[index].seconds - syncOffset));
+        // Transcript Time -> Audio Time: T - BUFFER
+        seekTo(Math.max(0, activeFile.data[index].seconds - BUFFER_SECONDS));
       }
     }
-  }, [loopingSentenceIdx, seekTo, activeFile, syncOffset]);
+  }, [loopingSentenceIdx, seekTo, activeFile]);
 
   const jumpToSentence = useCallback((index) => {
     if (activeFile?.data && index >= 0 && index < activeFile.data.length) {
       setLoopingSentenceIdx(null);
-      // Transcript Time -> Audio Time: T - Offset
-      seekTo(Math.max(0, activeFile.data[index].seconds - syncOffset));
+      // Play with Buffer: T - 0.8s
+      seekTo(Math.max(0, activeFile.data[index].seconds - BUFFER_SECONDS));
     }
-  }, [seekTo, activeFile, syncOffset]);
+  }, [seekTo, activeFile]);
 
   const handlePrev = useCallback((currentIndex) => {
     if (activeFile?.data?.length) {
@@ -382,24 +379,7 @@ const App = () => {
     }
   }, [jumpToSentence, activeFile]);
 
-  // Quick Sync Handler
-  const handleQuickSync = useCallback((targetSeconds) => {
-    if (videoRef.current) {
-      const currentAudioTime = videoRef.current.currentTime;
-      // If we want Audio Time X to match Transcript Time Y:
-      // Y = X + Offset  =>  Offset = Y - X
-      const newOffset = targetSeconds - currentAudioTime;
-      setSyncOffset(newOffset);
-
-      // Visual feedback
-      const msg = newOffset > 0
-        ? `Synced! Added +${newOffset.toFixed(1)}s offset.`
-        : `Synced! Added ${newOffset.toFixed(1)}s offset.`;
-
-      // Ideally use a toast, but alert is fine for now/debug or just log
-      console.log(msg);
-    }
-  }, []);
+  // Quick Sync Handler Removed
 
 
   // Time & Loop Logic
@@ -417,18 +397,16 @@ const App = () => {
       const activeIdx = loopingSentenceIdxRef.current;
       const data = activeFile.data;
 
-      // Check loop based on Synced Time
+      // Check loop based on Buffered Time
       if (activeIdx !== null && data.length > 0) {
-        // Transcript start/end times
-        const start = data[activeIdx].seconds;
-        const end = activeIdx < data.length - 1 ? data[activeIdx + 1].seconds : 999999;
+        // Transcript start/end times with BUFFER
+        const start = Math.max(0, data[activeIdx].seconds - BUFFER_SECONDS);
+        // End is next item start + buffer, or end of file
+        const end = (activeIdx < data.length - 1 ? data[activeIdx + 1].seconds : 999999) + BUFFER_SECONDS;
 
-        // Convert Audio Time 'now' to Transcript Time
-        const syncedNow = now + syncOffset;
-
-        if (syncedNow >= end - 0.1) {
-          // Restart loop: Go to Audio Time corresponding to Transcript Start
-          v.currentTime = Math.max(0, start - syncOffset);
+        if (now >= end - 0.1) {
+          // Restart loop
+          v.currentTime = start;
           v.play();
         }
       }
@@ -468,7 +446,7 @@ const App = () => {
       v.removeEventListener('ended', onPause);
       v.removeEventListener('timeupdate', update);
     };
-  }, [mediaUrl, activeFile, syncOffset]);
+  }, [mediaUrl, activeFile]);
 
   // Rate
   useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate; }, [playbackRate]);
@@ -482,10 +460,17 @@ const App = () => {
       if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
 
       const now = videoRef.current ? videoRef.current.currentTime : 0;
-      const syncedNow = now + syncOffset; // Sync awareness
+      // Index detection remains strict on timeline (no buffer for index) to avoid early highlighting
+      // or should it cover the buffer? User said "full sentence played". 
+      // If we seek to -0.8s, the index logic needs to know we are "in" that sentence.
+      // But simple findIndex works on >= seconds. If we are at -0.8s, we are strictly before the sentence.
+      // Ideally, the index logic should also account for the buffer if we want the UI to highlight immediately.
+      // Let's use strict 0.1s timeline for identifying "Active" sentence, but playback allows slack.
+      // Actually, if we seek to -0.8, the PREVIOUS sentence is likely active.
+      // Retaining strict logic for now as per user "strict 0.1s timeline" for display.
       const data = activeFile.data;
       const currentIdx = data.findIndex((item, idx) =>
-        syncedNow >= item.seconds && (idx === data.length - 1 || syncedNow < data[idx + 1].seconds)
+        now >= item.seconds && (idx === data.length - 1 || now < data[idx + 1].seconds)
       );
 
       switch (e.code) {
@@ -493,14 +478,14 @@ const App = () => {
         case 'ArrowLeft':
           if (data.length > 0) {
             const idx = currentIdx !== -1 ? currentIdx : 0;
-            const prevIdx = (idx - 1 + data.length) % data.length;
+            const prevIdx = (idx - 1 + data.length) % activeFile.data.length;
             jumpToSentence(prevIdx);
           }
           break;
         case 'ArrowRight':
           if (data.length > 0) {
             const idx = currentIdx !== -1 ? currentIdx : 0;
-            const nextIdx = (idx + 1) % data.length;
+            const nextIdx = (idx + 1) % activeFile.data.length;
             jumpToSentence(nextIdx);
           }
           break;
@@ -510,7 +495,7 @@ const App = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mediaUrl, activeFile, togglePlay, toggleLoop, handlePrev, handleNext, syncOffset]);
+  }, [mediaUrl, activeFile, togglePlay, toggleLoop, handlePrev, handleNext]);
 
   // File Handling
   const processFiles = async (fileList) => {
@@ -639,23 +624,9 @@ const App = () => {
                 <button onClick={() => saveApiKey(apiKey)} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl">Save Key</button>
 
                 <div className="pt-4 border-t border-slate-100">
-                  <h4 className="font-bold text-slate-800 mb-2 text-sm">Sync Calibration</h4>
-                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-slate-600 font-medium">Offset: {syncOffset > 0 ? '+' : ''}{syncOffset.toFixed(1)}s</span>
-                      <button onClick={() => setSyncOffset(0)} className="text-xs text-slate-400 hover:text-slate-600">Reset</button>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => setSyncOffset(prev => prev - 0.5)} className="flex-1 py-1 bg-white border border-slate-200 rounded shadow-sm text-slate-600 font-bold hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors">-0.5s</button>
-                      <button onClick={() => setSyncOffset(prev => prev - 5.0)} className="flex-1 py-1 bg-white border border-slate-200 rounded shadow-sm text-slate-600 font-bold hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors">-5s</button>
-                      <button onClick={() => setSyncOffset(prev => prev + 5.0)} className="flex-1 py-1 bg-white border border-slate-200 rounded shadow-sm text-slate-600 font-bold hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors">+5s</button>
-                      <button onClick={() => setSyncOffset(prev => prev + 0.5)} className="flex-1 py-1 bg-white border border-slate-200 rounded shadow-sm text-slate-600 font-bold hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors">+0.5s</button>
-                    </div>
-                    <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                      If highlighted text is <b>early</b>, use (+).<br />
-                      If text is <b>late</b> (behind audio), use (-).
-                    </p>
-                  </div>
+                  <p className="text-xs text-slate-400 text-center">
+                    Timeline uses strict 0.1s snap. Playback adds 0.8s buffer for context.
+                  </p>
                 </div>
 
                 <div className="pt-4 border-t border-slate-100">
@@ -918,7 +889,6 @@ const App = () => {
                           isGlobalLooping={loopingSentenceIdx !== null}
                           showAnalysis={showAnalysis}
                           toggleGlobalAnalysis={() => setShowAnalysis(!showAnalysis)}
-                          onQuickSync={handleQuickSync}
                         />
                       );
                     })}
@@ -954,7 +924,7 @@ const App = () => {
                     {/* Row 1: Time & Progress */}
                     <div className="flex items-center gap-3 text-[11px] font-mono font-bold text-slate-500">
                       <span className="w-10 shrink-0 text-indigo-600">
-                        {new Date(Math.max(0, currentTime + syncOffset) * 1000).toISOString().substr(14, 5)}
+                        {new Date(Math.max(0, currentTime) * 1000).toISOString().substr(14, 5)}
                       </span>
 
                       <div
