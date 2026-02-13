@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, memo } from 'react';
 import {
   Play, Pause, Rewind, FastForward,
   Eye, EyeOff, Languages, List, Search, Upload,
@@ -1005,8 +1005,25 @@ const App = () => {
                   <span className="w-10 shrink-0 text-right">{videoRef.current?.duration ? new Date(videoRef.current.duration * 1000).toISOString().substr(14, 5) : "00:00"}</span>
                 </div>
 
-                {/* Row 2: Controls */}
-                <div className="flex items-center justify-between px-2 sm:px-4 py-2 gap-2">
+                {/* Row 2: Video & Controls Split */}
+                <div className="flex items-center justify-between px-2 sm:px-4 py-2 gap-2 h-[64px] sm:h-[80px]">
+
+                  {/* Video Thumbnail (Restored) */}
+                  <div className="relative bg-black h-full w-[80px] sm:w-[120px] shrink-0 overflow-hidden group border-r border-slate-50 mr-2 rounded-lg">
+                    <video
+                      ref={videoRef}
+                      src={mediaUrl}
+                      className="w-full h-full object-contain"
+                      onClick={togglePlay}
+                      playsInline
+                      loop
+                    />
+                    {!isPlaying && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                        <Play size={16} fill="white" className="text-white ml-0.5" />
+                      </div>
+                    )}
+                  </div>
 
                   {/* Left: Speed & Toggle */}
                   <div className="flex items-center gap-2">
