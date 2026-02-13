@@ -180,6 +180,7 @@ const TranscriptItem = ({
 const App = () => {
   const [apiKey, setApiKey] = useState(localStorage.getItem('miniapp_gemini_key') || '');
   const [showSettings, setShowSettings] = useState(false);
+  const [syncOffset, setSyncOffset] = useState(0); // Sync calibration in seconds
 
   // Multi-file state
   const [files, setFiles] = useState([]);
@@ -212,11 +213,14 @@ const App = () => {
   // Derived current sentence index
   const currentSentenceIdx = useMemo(() => {
     if (!transcriptData || transcriptData.length === 0) return -1;
-    const adjustedNow = currentTime;
+    // Apply Sync Offset: Transcript Time = Player Time + Offset
+    // If Audio is at 2:30 (150s) and Transcript is at 1:50 (110s), Offset should be -40s.
+    // adjustedNow = 150 + (-40) = 110. Matches Transcript.
+    const adjustedNow = currentTime + syncOffset;
     return transcriptData.findIndex((item, idx) =>
       adjustedNow >= item.seconds && (idx === transcriptData.length - 1 || adjustedNow < transcriptData[idx + 1].seconds)
     );
-  }, [transcriptData, currentTime]);
+  }, [transcriptData, currentTime, syncOffset]);
 
   // Helper: Parse MM:SS.ms to seconds
   const parseTime = (timeStr) => {
@@ -586,6 +590,26 @@ if (files.length === 0) {
                 className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <button onClick={() => saveApiKey(apiKey)} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl">Save Key</button>
+
+              <div className="pt-4 border-t border-slate-100">
+                <h4 className="font-bold text-slate-800 mb-2 text-sm">Sync Calibration</h4>
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-slate-600 font-medium">Offset: {syncOffset > 0 ? '+' : ''}{syncOffset.toFixed(1)}s</span>
+                    <button onClick={() => setSyncOffset(0)} className="text-xs text-slate-400 hover:text-slate-600">Reset</button>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setSyncOffset(prev => prev - 0.5)} className="flex-1 py-1 bg-white border border-slate-200 rounded shadow-sm text-slate-600 font-bold hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors">-0.5s</button>
+                    <button onClick={() => setSyncOffset(prev => prev - 5.0)} className="flex-1 py-1 bg-white border border-slate-200 rounded shadow-sm text-slate-600 font-bold hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors">-5s</button>
+                    <button onClick={() => setSyncOffset(prev => prev + 5.0)} className="flex-1 py-1 bg-white border border-slate-200 rounded shadow-sm text-slate-600 font-bold hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors">+5s</button>
+                    <button onClick={() => setSyncOffset(prev => prev + 0.5)} className="flex-1 py-1 bg-white border border-slate-200 rounded shadow-sm text-slate-600 font-bold hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors">+0.5s</button>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                    If highlighted text is <b>early</b>, use (+).<br />
+                    If text is <b>late</b> (behind audio), use (-).
+                  </p>
+                </div>
+              </div>
 
               <div className="pt-4 border-t border-slate-100">
                 <h4 className="font-bold text-slate-800 mb-2 text-sm">Cached Transcripts</h4>
