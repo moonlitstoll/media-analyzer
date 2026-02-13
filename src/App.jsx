@@ -16,7 +16,8 @@ const TranscriptItem = ({
   item, idx, isActive, isGlobalLooping,
   seekTo, jumpToSentence, toggleLoop,
   onPrev, onNext,
-  isLooping, showAnalysis, toggleGlobalAnalysis
+  isLooping, showAnalysis, toggleGlobalAnalysis,
+  onQuickSync // New prop
 }) => {
   const itemRef = useRef(null);
 
@@ -31,7 +32,7 @@ const TranscriptItem = ({
     <div
       ref={itemRef}
       className={`
-        group relative transition-all duration-300 ease-out rounded-2xl border mb-3
+        group relative transition-all duration-300 ease-out rounded-2xl border mb-3 scroll-mt-32
         ${isActive
           ? 'bg-white border-indigo-200 shadow-xl shadow-indigo-100/50 ring-1 ring-indigo-500/20'
           : 'bg-white/80 border-slate-100 hover:border-indigo-100 hover:shadow-lg hover:shadow-slate-100/50 hover:bg-white'}
@@ -88,6 +89,15 @@ const TranscriptItem = ({
               title="Next Sentence"
             >
               <ChevronRight size={16} />
+            </button>
+
+            {/* Quick Sync Button */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onQuickSync(item.seconds); }}
+              className={`p-2 rounded-full transition-all text-slate-300 hover:text-red-500 hover:bg-red-50 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+              title="Sync Here: Match audio to this line"
+            >
+              <Gauge size={16} />
             </button>
 
           </div>
@@ -369,6 +379,25 @@ const App = () => {
       jumpToSentence(nextIndex);
     }
   }, [jumpToSentence, activeFile]);
+
+  // Quick Sync Handler
+  const handleQuickSync = useCallback((targetSeconds) => {
+    if (videoRef.current) {
+      const currentAudioTime = videoRef.current.currentTime;
+      // If we want Audio Time X to match Transcript Time Y:
+      // Y = X + Offset  =>  Offset = Y - X
+      const newOffset = targetSeconds - currentAudioTime;
+      setSyncOffset(newOffset);
+
+      // Visual feedback
+      const msg = newOffset > 0
+        ? `Synced! Added +${newOffset.toFixed(1)}s offset.`
+        : `Synced! Added ${newOffset.toFixed(1)}s offset.`;
+
+      // Ideally use a toast, but alert is fine for now/debug or just log
+      console.log(msg);
+    }
+  }, []);
 
 
   // Time & Loop Logic
@@ -871,6 +900,7 @@ return (
                         isGlobalLooping={loopingSentenceIdx !== null}
                         showAnalysis={showAnalysis}
                         toggleGlobalAnalysis={() => setShowAnalysis(!showAnalysis)}
+                        onQuickSync={handleQuickSync}
                       />
                     );
                   })}
