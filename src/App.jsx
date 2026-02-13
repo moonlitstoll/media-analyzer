@@ -218,6 +218,26 @@ const App = () => {
     );
   }, [transcriptData, currentTime]);
 
+  // Helper: Parse MM:SS.ms to seconds
+  const parseTime = (timeStr) => {
+    if (!timeStr) return 0;
+    const cleanStr = timeStr.replace(/[\[\]]/g, '');
+    const parts = cleanStr.split(':');
+    if (parts.length === 2) {
+      return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+    }
+    return 0;
+  };
+
+  // Helper: Sanitize & Sort Data
+  const sanitizeData = (data) => {
+    if (!Array.isArray(data)) return [];
+    return data.map(item => ({
+      ...item,
+      seconds: typeof item.seconds === 'number' ? item.seconds : parseTime(item.timestamp)
+    })).sort((a, b) => a.seconds - b.seconds);
+  };
+
   // Sync ref
   useEffect(() => { loopingSentenceIdxRef.current = loopingSentenceIdx; }, [loopingSentenceIdx]);
 
@@ -253,7 +273,9 @@ const App = () => {
     const cachedData = localStorage.getItem(key);
     if (cachedData) {
       try {
-        const data = JSON.parse(cachedData);
+        const rawData = JSON.parse(cachedData);
+        const data = sanitizeData(rawData); // Sort & Sanitize
+
         // Clean up name from key
         const name = key.replace('gemini_analysis_', '').replace(/_\d+$/, '');
         const id = 'cached-' + Date.now();
@@ -318,7 +340,7 @@ const App = () => {
 
     if (loopingSentenceIdx !== index) {
       if (activeFile?.data?.[index]) {
-        seekTo(Math.max(0, activeFile.data[index].seconds - 1.0));
+        seekTo(Math.max(0, activeFile.data[index].seconds - 0.1)); // Small offset for loop start
       }
     }
   }, [loopingSentenceIdx, seekTo, activeFile]);
@@ -326,7 +348,7 @@ const App = () => {
   const jumpToSentence = useCallback((index) => {
     if (activeFile?.data && index >= 0 && index < activeFile.data.length) {
       setLoopingSentenceIdx(null);
-      seekTo(Math.max(0, activeFile.data[index].seconds - 1.0));
+      seekTo(Math.max(0, activeFile.data[index].seconds)); // Exact time
     }
   }, [seekTo, activeFile]);
 
@@ -364,8 +386,8 @@ const App = () => {
         const start = data[activeIdx].seconds;
         const end = activeIdx < data.length - 1 ? data[activeIdx + 1].seconds : v.duration;
         if (now >= end - 0.1) {
-          // Loop restart with -1.0s offset
-          v.currentTime = Math.max(0, start - 1.0);
+          // Loop restart with small offset
+          v.currentTime = Math.max(0, start);
           v.play();
         }
       }
@@ -379,7 +401,7 @@ const App = () => {
         const activeIdx = loopingSentenceIdxRef.current;
         const data = activeFile.data;
         if (data[activeIdx]) {
-          v.currentTime = Math.max(0, data[activeIdx].seconds - 1.0);
+          v.currentTime = Math.max(0, data[activeIdx].seconds);
           v.play();
         }
       } else {
@@ -471,13 +493,15 @@ const App = () => {
 
         if (cached) {
           console.log("Using cached analysis for", fItem.file.name);
-          const data = JSON.parse(cached);
+          const rawData = JSON.parse(cached);
+          const data = sanitizeData(rawData); // Sort & Sanitize
           setFiles(prev => prev.map(p => p.id === fItem.id ? { ...p, data: data, isAnalyzing: false } : p));
         } else {
           // No cache -> Call API
-          const data = await analyzeMedia(fItem.file, apiKey);
+          const rawData = await analyzeMedia(fItem.file, apiKey);
+          const data = sanitizeData(rawData); // Sort & Sanitize BEFORE CACHING
 
-          // Save to Cache
+          // Save to Cache (Sorted)
           try {
             localStorage.setItem(cacheKey, JSON.stringify(data));
           } catch (e) {
