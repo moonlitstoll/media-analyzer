@@ -22,9 +22,9 @@ const TranscriptItem = memo(({
   const itemRef = useRef(null);
 
   useEffect(() => {
-    // Scroll to START (top) of the view
+    // Scroll to CENTER of the view for better context
     if (isActive && itemRef.current && !isGlobalLooping) {
-      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [isActive, isGlobalLooping, showAnalysis]);
 
@@ -172,14 +172,7 @@ const App = () => {
   const mediaUrl = activeFile?.url || null;
   const isAnalyzing = activeFile?.isAnalyzing || false;
 
-  // Derived current sentence index
-  const currentSentenceIdx = useMemo(() => {
-    if (!transcriptData || transcriptData.length === 0) return -1;
-    // Strict timeline for display (0.1s snap prompt), Playback uses buffer.
-    return transcriptData.findIndex((item, idx) =>
-      currentTime >= item.seconds && (idx === transcriptData.length - 1 || currentTime < transcriptData[idx + 1].seconds)
-    );
-  }, [transcriptData, currentTime]);
+
 
   // Helper: Parse MM:SS.ms to seconds
   const parseTime = (timeStr) => {
@@ -334,7 +327,25 @@ const App = () => {
   // Quick Sync Handler Removed
 
 
-  // Time & Loop Logic
+  // --- SYNC ENGINE (High-Precision 100ms) ---
+  const [activeSentenceIdx, setActiveSentenceIdx] = useState(null);
+  const activeIdxRef = useRef(null); // Ref for immediate comparison in loop
+
+  // Strict Index Calculation
+  const findActiveIndex = useCallback((time, data) => {
+    if (!data || data.length === 0) return null;
+    // Binary search or simple find? Simple find is fast enough for <1000 items
+    // Strict Condition: time >= item.start && time < nextItem.start
+    // Using seconds (float)
+    const idx = data.findIndex((item, i) => {
+      const start = item.seconds;
+      const end = (i < data.length - 1) ? data[i + 1].seconds : (videoRef.current?.duration || Infinity);
+      return time >= start && time < end;
+    });
+    return idx;
+  }, []);
+
+  // Sync Loop
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !activeFile?.data) return;
@@ -342,70 +353,93 @@ const App = () => {
     // Auto loop the whole video only if no sentence is being looped
     v.loop = loopingSentenceIdxRef.current === null;
 
-    const update = () => {
+    let rAF;
+    let lastTime = 0;
+
+    const tick = () => {
       const now = v.currentTime;
+
+      // 1. Update Progress Bar (Throttle to ~30fps or every frame if smooth)
       setCurrentTime(now);
 
-      const activeIdx = loopingSentenceIdxRef.current;
-      const data = activeFile.data;
+      // 2. Strict Sync Check (Every Frame for precision, state update only on change)
+      const newIdx = findActiveIndex(now, activeFile.data);
 
-      // Check loop based on Buffered Time
-      if (activeIdx !== null && data.length > 0) {
-        // Transcript start/end times with BUFFER
-        const start = Math.max(0, data[activeIdx].seconds - BUFFER_SECONDS);
+      if (newIdx !== -1 && newIdx !== activeIdxRef.current) {
+        // Index Changed!
+        activeIdxRef.current = newIdx;
+        setActiveSentenceIdx(newIdx); // Triggers UI update
+      }
 
-        // End is next item start + buffer, OR video duration if it's the last item
-        let end;
-        if (activeIdx < data.length - 1) {
-          end = data[activeIdx + 1].seconds + BUFFER_SECONDS;
-        } else {
-          end = v.duration + BUFFER_SECONDS; // Ensure we cover up to the very end
-        }
+      // 3. Loop Logic (0.8s Buffer)
+      const loopIdx = loopingSentenceIdxRef.current;
+      if (loopIdx !== null) {
+        const item = activeFile.data[loopIdx];
+        if (item) {
+          const start = Math.max(0, item.seconds - BUFFER_SECONDS);
+          const end = (loopIdx < activeFile.data.length - 1)
+            ? activeFile.data[loopIdx + 1].seconds + BUFFER_SECONDS
+            : v.duration + BUFFER_SECONDS; // Handle last item end
 
-        // Trigger loop if we passed the end OR if video ended (for last sentence)
-        if (now >= end - 0.1 || (v.ended && activeIdx === data.length - 1)) {
-          // Restart loop
-          v.currentTime = start;
-          v.play();
+          if (now >= end - 0.1 || (v.ended && loopIdx === activeFile.data.length - 1)) {
+            v.currentTime = start;
+            v.play();
+          }
         }
       }
-    };
 
-    // High-Precision Sync Loop (requestAnimationFrame)
-    let rAF = null;
-    const loop = () => {
-      update();
       if (!v.paused && !v.ended) {
-        rAF = requestAnimationFrame(loop);
+        rAF = requestAnimationFrame(tick);
       }
     };
 
     const onPlay = () => {
       setIsPlaying(true);
-      loop();
+      tick();
     };
 
     const onPause = () => {
       setIsPlaying(false);
       cancelAnimationFrame(rAF);
+      // Immediate sync on pause to ensure correct highlighting
+      const idx = findActiveIndex(v.currentTime, activeFile.data);
+      if (idx !== -1 && idx !== activeIdxRef.current) {
+        activeIdxRef.current = idx;
+        setActiveSentenceIdx(idx);
+      }
+    };
+
+    const onSeek = () => {
+      // Immediate sync on seek
+      const idx = findActiveIndex(v.currentTime, activeFile.data);
+      if (idx !== -1) {
+        activeIdxRef.current = idx;
+        setActiveSentenceIdx(idx);
+      }
+      setCurrentTime(v.currentTime);
     };
 
     v.addEventListener('play', onPlay);
     v.addEventListener('pause', onPause);
     v.addEventListener('ended', onPause);
-    // Initial update in case it's already playing or for seek
-    v.addEventListener('timeupdate', update); // Keep timeupdate as backup/seek trigger
+    v.addEventListener('timeupdate', onSeek); // Handles seek & backup sync
+    v.addEventListener('seeking', onSeek);    // Handles scrub dragging
 
-    if (!v.paused) loop();
+    if (!v.paused) tick();
 
     return () => {
       cancelAnimationFrame(rAF);
       v.removeEventListener('play', onPlay);
       v.removeEventListener('pause', onPause);
       v.removeEventListener('ended', onPause);
-      v.removeEventListener('timeupdate', update);
+      v.removeEventListener('timeupdate', onSeek);
+      v.removeEventListener('seeking', onSeek);
     };
-  }, [mediaUrl, activeFile]);
+  }, [activeFile, findActiveIndex]);
+
+  // Derived current idx for UI (now using state directly)
+  const currentSentenceIdx = activeSentenceIdx;
+
 
   // Rate
   useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate; }, [playbackRate]);
