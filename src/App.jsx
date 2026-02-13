@@ -195,6 +195,40 @@ const App = () => {
   const mediaUrl = activeFile?.url || null;
   const isAnalyzing = activeFile?.isAnalyzing || false;
 
+  // --- CHUNKED RENDERING STATE ---
+  const [displayedLimit, setDisplayedLimit] = useState(20);
+  const observerTarget = useRef(null);
+
+  // Reset limit active file changes
+  useEffect(() => {
+    setDisplayedLimit(20);
+  }, [activeFileId]);
+
+  // Auto-expand limit if active sentence is near or beyond current limit
+  useEffect(() => {
+    if (activeSentenceIdx !== -1 && activeSentenceIdx >= displayedLimit - 5) {
+      setDisplayedLimit(prev => Math.min(Math.max(prev, activeSentenceIdx + 20), transcriptData.length));
+    }
+  }, [activeSentenceIdx, transcriptData.length]); // intended: update when activeIdx changes
+
+  // Infinite Scroll Observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && displayedLimit < transcriptData.length) {
+          setDisplayedLimit(prev => Math.min(prev + 20, transcriptData.length));
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [displayedLimit, transcriptData.length]);
+
 
 
   // Helper: Parse MM:SS.ms to seconds
@@ -887,7 +921,7 @@ const App = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {transcriptData.map((item, idx) => {
+                    {transcriptData.slice(0, displayedLimit).map((item, idx) => {
                       const isActive = idx === currentSentenceIdx;
                       return (
                         <TranscriptItem
@@ -901,13 +935,20 @@ const App = () => {
                           onPrev={() => handlePrev(idx)}
                           onNext={() => handleNext(idx)}
                           isLooping={loopingSentenceIdx === idx}
-                          isGlobalLooping={loopingSentenceIdx !== null}
+                          isGlobalLooping={loopingSentenceIdxRef.current !== null}
                           showAnalysis={showAnalysis}
                           showTranslations={showTranslations}
                           toggleGlobalAnalysis={() => setShowAnalysis(!showAnalysis)}
+                          onQuickSync={() => { /* Removed */ }}
                         />
                       );
                     })}
+                    {/* Sentinel for Infinite Scroll */}
+                    {displayedLimit < transcriptData.length && (
+                      <div ref={observerTarget} className="h-10 w-full flex items-center justify-center p-4">
+                        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
