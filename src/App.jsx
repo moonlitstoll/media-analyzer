@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import {
   Play, Pause, Rewind, FastForward,
   Eye, EyeOff, Languages, List, Search, Upload,
@@ -12,7 +12,7 @@ import { analyzeMedia } from './services/gemini';
 
 
 
-const TranscriptItem = ({
+const TranscriptItem = memo(({
   item, idx, isActive, isGlobalLooping,
   seekTo, jumpToSentence, toggleLoop,
   onPrev, onNext,
@@ -24,7 +24,7 @@ const TranscriptItem = ({
   useEffect(() => {
     // Scroll to START (top) of the view
     if (isActive && itemRef.current && !isGlobalLooping) {
-      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [isActive, isGlobalLooping, showAnalysis]);
 
@@ -185,7 +185,7 @@ const TranscriptItem = ({
       </div>
     </div>
   );
-};
+});
 
 const App = () => {
   const [apiKey, setApiKey] = useState(localStorage.getItem('miniapp_gemini_key') || '');
@@ -433,30 +433,40 @@ const App = () => {
         }
       }
     };
-    v.addEventListener('timeupdate', update);
-    v.addEventListener('play', () => setIsPlaying(true));
-    v.addEventListener('pause', () => setIsPlaying(false));
-    v.addEventListener('ended', () => {
-      // Handle the case where the video ends and we need to loop manually if native loop was off
-      if (loopingSentenceIdxRef.current !== null) {
-        const activeIdx = loopingSentenceIdxRef.current;
-        const data = activeFile.data;
-        if (data[activeIdx]) {
-          v.currentTime = Math.max(0, data[activeIdx].seconds - syncOffset);
-          v.play();
-        }
-      } else {
-        // Global loop if native loop was off for some reason
-        v.currentTime = 0;
-        v.play();
+
+    // High-Precision Sync Loop (requestAnimationFrame)
+    let rAF = null;
+    const loop = () => {
+      update();
+      if (!v.paused && !v.ended) {
+        rAF = requestAnimationFrame(loop);
       }
-    });
+    };
+
+    const onPlay = () => {
+      setIsPlaying(true);
+      loop();
+    };
+
+    const onPause = () => {
+      setIsPlaying(false);
+      cancelAnimationFrame(rAF);
+    };
+
+    v.addEventListener('play', onPlay);
+    v.addEventListener('pause', onPause);
+    v.addEventListener('ended', onPause);
+    // Initial update in case it's already playing or for seek
+    v.addEventListener('timeupdate', update); // Keep timeupdate as backup/seek trigger
+
+    if (!v.paused) loop();
 
     return () => {
+      cancelAnimationFrame(rAF);
+      v.removeEventListener('play', onPlay);
+      v.removeEventListener('pause', onPause);
+      v.removeEventListener('ended', onPause);
       v.removeEventListener('timeupdate', update);
-      v.removeEventListener('play', null);
-      v.removeEventListener('pause', null);
-      v.removeEventListener('ended', null);
     };
   }, [mediaUrl, activeFile, syncOffset]);
 
