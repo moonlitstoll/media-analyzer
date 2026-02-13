@@ -70,7 +70,7 @@ const TranscriptItem = memo(({
     <div
       ref={itemRef}
       className={`
-        group relative transition-all duration-300 ease-out rounded-2xl border mb-3 scroll-mt-32
+        group relative transition-all duration-300 ease-out rounded-xl sm:rounded-2xl border mb-3 scroll-mt-32
         ${isActive
           ? 'bg-white border-indigo-200 shadow-xl shadow-indigo-100/50 ring-1 ring-indigo-500/20'
           : 'bg-white/80 border-slate-100 hover:border-indigo-100 hover:shadow-lg hover:shadow-slate-100/50 hover:bg-white'}
@@ -86,7 +86,7 @@ const TranscriptItem = memo(({
         </div>
       )}
 
-      <div className="p-3 sm:p-4">
+      <div className="p-2 sm:p-4">
         {/* Header: Timestamp & Controls */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
           <button
@@ -926,7 +926,7 @@ const App = () => {
         {activeFile ? (
           <div className="flex flex-col h-full">
             <div className="flex-1 w-full overflow-y-auto bg-[#F8FAFC]" onClick={() => { setShowSpeedMenu(false); setShowFileList(false); }}>
-              <div className="max-w-6xl mx-auto px-2 py-4 md:p-6 pb-32">
+              <div className="max-w-6xl mx-auto px-0.5 py-4 sm:px-2 md:p-6 pb-32">
                 {isAnalyzing ? (
                   <div className="flex flex-col items-center justify-center py-20 space-y-6">
                     <div className="relative w-20 h-20">
