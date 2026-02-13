@@ -914,11 +914,37 @@ const App = () => {
             </div>
 
             {/* 2. Bottom Player Controls (Sticky Bottom) */}
-            <div className="flex-none bg-white border-t border-slate-200 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
-              <div className="max-w-5xl mx-auto">
-                <div className="flex flex-row h-[80px] items-stretch">
-                  {/* Video (Square, Left) */}
-                  <div className="relative bg-black h-full aspect-square flex-shrink-0 border-r border-slate-100 group">
+            <div className="flex-none bg-white/95 backdrop-blur-md border-t border-slate-200 z-50 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] pb-safe">
+              <div className="max-w-5xl mx-auto flex flex-col">
+
+                {/* Row 1: Full-Width Time & Progress (Optimized for Mobile) */}
+                <div className="w-full px-4 pt-3 pb-1 flex items-center gap-3 text-[10px] sm:text-[11px] font-mono font-bold text-slate-500">
+                  <span className="w-10 shrink-0 text-indigo-600">
+                    {new Date(Math.max(0, currentTime) * 1000).toISOString().substr(14, 5)}
+                  </span>
+
+                  <div
+                    className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden cursor-pointer group relative"
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      seekTo(((e.clientX - rect.left) / rect.width) * videoRef.current.duration);
+                    }}
+                  >
+                    <div className="absolute inset-0 w-full h-full hover:bg-slate-200/40 transition-colors" />
+                    <div
+                      className="h-full bg-indigo-500 rounded-full relative group-hover:bg-indigo-600 transition-all duration-300 shadow-[0_0_8px_rgba(99,102,241,0.5)]"
+                      style={{ width: `${videoRef.current?.duration ? (currentTime / videoRef.current.duration) * 100 : 0}%` }}
+                    />
+                  </div>
+
+                  <span className="w-10 shrink-0 text-right">{videoRef.current?.duration ? new Date(videoRef.current.duration * 1000).toISOString().substr(14, 5) : "00:00"}</span>
+                </div>
+
+                {/* Row 2: Video & Controls Split */}
+                <div className="flex flex-row h-[64px] sm:h-[80px] items-center">
+
+                  {/* Video (Responsive Width) */}
+                  <div className="relative bg-black h-full w-[80px] sm:w-[120px] shrink-0 overflow-hidden group border-r border-slate-50">
                     <video
                       ref={videoRef}
                       src={mediaUrl}
@@ -929,135 +955,107 @@ const App = () => {
                     />
                     {!isPlaying && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-                        <Play size={24} fill="white" className="text-white ml-0.5" />
+                        <Play size={16} fill="white" className="text-white ml-0.5" />
                       </div>
                     )}
                   </div>
 
-                  {/* Controls (Right, Flex Column) */}
-                  <div className="flex-1 px-4 py-3 flex flex-col justify-center gap-2 min-w-0 bg-white relative">
+                  {/* Main Controls Overlay */}
+                  <div className="flex-1 flex items-center justify-around px-2 sm:px-4 gap-0.5 sm:gap-2">
 
-                    {/* Row 1: Time & Progress */}
-                    <div className="flex items-center gap-3 text-[11px] font-mono font-bold text-slate-500">
-                      <span className="w-12 shrink-0 text-indigo-600">
-                        {new Date(Math.max(0, currentTime) * 1000).toISOString().substr(14, 5)}
-                      </span>
-
-                      <div
-                        className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden cursor-pointer group relative"
-                        onClick={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          seekTo(((e.clientX - rect.left) / rect.width) * videoRef.current.duration);
-                        }}
+                    {/* 1. Speed Button */}
+                    <div className="relative flex-shrink-0">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowSpeedMenu(!showSpeedMenu); }}
+                        className={`
+                          flex items-center justify-center gap-1 px-1.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all min-w-[50px] sm:min-w-[70px] shadow-sm
+                          ${showSpeedMenu ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-100'}
+                        `}
                       >
-                        <div className="absolute inset-0 w-full h-full hover:bg-slate-200/50 transition-colors" />
-                        <div
-                          className="h-full bg-indigo-500 rounded-full relative group-hover:bg-indigo-600 transition-colors shadow-[0_0_8px_rgba(99,102,241,0.5)]"
-                          style={{ width: `${videoRef.current?.duration ? (currentTime / videoRef.current.duration) * 100 : 0}%` }}
-                        />
-                      </div>
+                        <Gauge size={12} className="sm:w-3.5 sm:h-3.5" /> {playbackRate.toFixed(1)}x
+                      </button>
 
-                      <span className="w-12 shrink-0 text-right">{videoRef.current?.duration ? new Date(videoRef.current.duration * 1000).toISOString().substr(14, 5) : "00:00"}</span>
-                    </div>
-
-                    {/* Row 2: Main Buttons (Redesigned & Responsive) */}
-                    <div className="flex items-center justify-around mt-1 gap-1 sm:gap-4">
-
-                      {/* 1. Speed Button */}
-                      <div className="relative flex-shrink-0">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setShowSpeedMenu(!showSpeedMenu); }}
-                          className={`
-                            flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[60px] sm:min-w-[75px] shadow-sm
-                            ${showSpeedMenu ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}
-                          `}
-                        >
-                          <Gauge size={14} /> {playbackRate.toFixed(1)}x
-                        </button>
-
-                        {showSpeedMenu && (
-                          <div className="absolute bottom-full left-0 mb-3 bg-white rounded-2xl shadow-2xl border border-indigo-50 p-3 z-[60] animate-in slide-in-from-bottom-2 duration-200 w-48 sm:w-56">
-                            <div className="flex items-center justify-between mb-2 px-1">
-                              <span className="text-[10px] font-bold text-slate-400 capitalize">Playback Speed</span>
-                              <span className="text-xs font-mono font-bold text-indigo-600">{playbackRate.toFixed(1)}x</span>
-                            </div>
-                            <div className="grid grid-cols-4 gap-1.5">
-                              {[0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0].map(rate => (
-                                <button
-                                  key={rate}
-                                  onClick={(e) => { e.stopPropagation(); setPlaybackRate(rate); setShowSpeedMenu(false); }}
-                                  className={`
-                                    py-2 text-center rounded-lg text-xs font-bold transition-all
-                                    ${Math.abs(playbackRate - rate) < 0.01
-                                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                                      : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-600'}
-                                  `}
-                                >
-                                  {rate.toFixed(1)}
-                                </button>
-                              ))}
-                            </div>
+                      {showSpeedMenu && (
+                        <div className="absolute bottom-full left-0 mb-4 bg-white rounded-2xl shadow-2xl border border-indigo-50 p-2.5 z-[60] animate-in slide-in-from-bottom-2 duration-200 w-40 sm:w-56">
+                          <div className="flex items-center justify-between mb-2 px-1">
+                            <span className="text-[9px] font-bold text-slate-400 capitalize">Speed</span>
+                            <span className="text-[10px] font-mono font-bold text-indigo-600">{playbackRate.toFixed(1)}x</span>
                           </div>
-                        )}
-                      </div>
-
-                      {/* 2. Global Analysis Toggle (Eye) */}
-                      <button
-                        onClick={() => setShowAnalysis(!showAnalysis)}
-                        className={`
-                          p-2 sm:p-3 rounded-2xl flex-shrink-0 transition-all active:scale-95 shadow-sm border
-                          ${showAnalysis
-                            ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
-                            : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50'}
-                        `}
-                        title={showAnalysis ? "Hide All Descriptions" : "Show All Descriptions"}
-                      >
-                        {showAnalysis ? <Eye size={22} className="stroke-[2.5]" /> : <EyeOff size={22} />}
-                      </button>
-
-                      {/* 3. Prev */}
-                      <button
-                        onClick={() => handlePrev(currentSentenceIdx !== -1 ? currentSentenceIdx : 0)}
-                        className="p-1 sm:p-2 flex-shrink-0 text-slate-400 hover:text-indigo-600 active:scale-75 transition-all"
-                      >
-                        <SkipBack size={26} />
-                      </button>
-
-                      {/* 4. Play/Pause (Primary Action) */}
-                      <button
-                        onClick={togglePlay}
-                        className="w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[20px] flex items-center justify-center shadow-lg shadow-indigo-500/40 active:scale-90 transition-all ring-4 ring-indigo-50"
-                      >
-                        {isPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1" />}
-                      </button>
-
-                      {/* 5. Next */}
-                      <button
-                        onClick={() => handleNext(currentSentenceIdx !== -1 ? currentSentenceIdx : 0)}
-                        className="p-1 sm:p-2 flex-shrink-0 text-slate-400 hover:text-indigo-600 active:scale-75 transition-all"
-                      >
-                        <SkipForward size={26} />
-                      </button>
-
-                      {/* 6. Sentence Loop (Repeat) */}
-                      <button
-                        onClick={() => {
-                          if (currentSentenceIdx !== -1) {
-                            toggleLoop(currentSentenceIdx);
-                          }
-                        }}
-                        className={`
-                          p-2 sm:p-3 rounded-2xl flex-shrink-0 transition-all active:scale-95 shadow-sm border
-                          ${loopingSentenceIdx !== null
-                            ? 'bg-amber-100 text-amber-600 border-amber-200'
-                            : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50'}
-                        `}
-                        title="Loop Current Sentence"
-                      >
-                        <Repeat size={22} className={loopingSentenceIdx !== null ? 'animate-spin-slow' : ''} />
-                      </button>
-
+                          <div className="grid grid-cols-4 gap-1">
+                            {[0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0].map(rate => (
+                              <button
+                                key={rate}
+                                onClick={(e) => { e.stopPropagation(); setPlaybackRate(rate); setShowSpeedMenu(false); }}
+                                className={`
+                                  py-1.5 text-center rounded-lg text-[10px] font-bold transition-all
+                                  ${Math.abs(playbackRate - rate) < 0.01
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-600'}
+                                `}
+                              >
+                                {rate.toFixed(1)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
+
+                    {/* 2. Global Analysis Toggle (Eye) */}
+                    <button
+                      onClick={() => setShowAnalysis(!showAnalysis)}
+                      className={`
+                        p-2 sm:p-2.5 rounded-xl flex-shrink-0 transition-all active:scale-95 shadow-sm border
+                        ${showAnalysis
+                          ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                          : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50'}
+                      `}
+                      title={showAnalysis ? "Hide All" : "Show All"}
+                    >
+                      {showAnalysis ? <Eye size={18} className="sm:w-5 sm:h-5 stroke-[2.5]" /> : <EyeOff size={18} className="sm:w-5 sm:h-5" />}
+                    </button>
+
+                    {/* 3. Prev */}
+                    <button
+                      onClick={() => handlePrev(currentSentenceIdx !== -1 ? currentSentenceIdx : 0)}
+                      className="p-1 sm:p-2 flex-shrink-0 text-slate-400 hover:text-indigo-600 active:scale-75 transition-all"
+                    >
+                      <SkipBack size={20} className="sm:w-6 sm:h-6" />
+                    </button>
+
+                    {/* 4. Play/Pause (Primary Action) */}
+                    <button
+                      onClick={togglePlay}
+                      className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[18px] flex items-center justify-center shadow-lg shadow-indigo-500/40 active:scale-90 transition-all ring-4 ring-indigo-50"
+                    >
+                      {isPlaying ? <Pause size={24} fill="currentColor" className="sm:w-7 sm:h-7" /> : <Play size={24} fill="currentColor" className="ml-0.5 sm:w-7 sm:h-7" />}
+                    </button>
+
+                    {/* 5. Next */}
+                    <button
+                      onClick={() => handleNext(currentSentenceIdx !== -1 ? currentSentenceIdx : 0)}
+                      className="p-1 sm:p-2 flex-shrink-0 text-slate-400 hover:text-indigo-600 active:scale-75 transition-all"
+                    >
+                      <SkipForward size={20} className="sm:w-6 sm:h-6" />
+                    </button>
+
+                    {/* 6. Sentence Loop (Repeat) */}
+                    <button
+                      onClick={() => {
+                        if (currentSentenceIdx !== -1) {
+                          toggleLoop(currentSentenceIdx);
+                        }
+                      }}
+                      className={`
+                        p-2 sm:p-2.5 rounded-xl flex-shrink-0 transition-all active:scale-95 shadow-sm border
+                        ${loopingSentenceIdx !== null
+                          ? 'bg-amber-100 text-amber-600 border-amber-200'
+                          : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50'}
+                      `}
+                      title="Loop"
+                    >
+                      <Repeat size={18} className={`sm:w-5 sm:h-5 ${loopingSentenceIdx !== null ? 'animate-spin-slow' : ''}`} />
+                    </button>
                   </div>
                 </div>
               </div>
