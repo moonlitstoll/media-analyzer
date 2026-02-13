@@ -1006,10 +1006,10 @@ const App = () => {
                 </div>
 
                 {/* Row 2: Video & Controls Split */}
-                <div className="flex items-center justify-between px-2 sm:px-4 py-2 gap-2 h-[64px] sm:h-[80px]">
+                <div className="flex items-center justify-between px-2 py-1 gap-1 h-[64px] sm:h-[80px]">
 
                   {/* Video Thumbnail (Restored) */}
-                  <div className="relative bg-black h-full w-[80px] sm:w-[120px] shrink-0 overflow-hidden group border-r border-slate-50 mr-2 rounded-lg">
+                  <div className="relative bg-black h-full w-[80px] sm:w-[120px] shrink-0 overflow-hidden group border-r border-slate-50 mr-1 rounded-lg">
                     <video
                       ref={videoRef}
                       src={mediaUrl}
@@ -1026,16 +1026,16 @@ const App = () => {
                   </div>
 
                   {/* Left: Speed & Toggle */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <div className="relative">
                       <button
                         onClick={(e) => { e.stopPropagation(); setShowSpeedMenu(!showSpeedMenu); }}
                         className={`
-                          flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-all min-w-[60px] border
+                          flex items-center justify-center gap-0.5 px-1.5 py-1.5 rounded-lg text-[10px] font-bold transition-all min-w-[36px] border
                           ${showSpeedMenu ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}
                         `}
                       >
-                        <Gauge size={14} /> {playbackRate.toFixed(1)}x
+                        {playbackRate.toFixed(1)}x
                       </button>
                       {showSpeedMenu && (
                         <div className="absolute bottom-full left-0 mb-2 bg-white rounded-xl shadow-xl border border-slate-100 p-2 z-[60] w-48">
@@ -1056,43 +1056,43 @@ const App = () => {
 
                     <button
                       onClick={() => setShowAnalysis(!showAnalysis)}
-                      className={`p-2 rounded-lg border transition-all ${showAnalysis ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-white text-slate-400 border-slate-200'}`}
+                      className={`p-1.5 rounded-lg border transition-all ${showAnalysis ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-white text-slate-400 border-slate-200'}`}
                     >
-                      {showAnalysis ? <Eye size={18} /> : <EyeOff size={18} />}
+                      {showAnalysis ? <Eye size={16} /> : <EyeOff size={16} />}
                     </button>
                   </div>
 
                   {/* Center: Play Controls */}
-                  <div className="flex items-center gap-3 md:gap-6">
-                    <button onClick={() => handlePrev(currentSentenceIdx)} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
-                      <SkipBack size={20} className="fill-current" />
+                  <div className="flex items-center gap-1 md:gap-4">
+                    <button onClick={() => handlePrev(currentSentenceIdx)} className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
+                      <SkipBack size={18} className="fill-current" />
                     </button>
 
                     <button
                       onClick={togglePlay}
-                      className="w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-200 transition-transform active:scale-95"
+                      className="w-10 h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-200 transition-transform active:scale-95"
                     >
-                      {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" className="ml-1" />}
+                      {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-0.5" />}
                     </button>
 
-                    <button onClick={() => handleNext(currentSentenceIdx)} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
-                      <SkipForward size={20} className="fill-current" />
+                    <button onClick={() => handleNext(currentSentenceIdx)} className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
+                      <SkipForward size={18} className="fill-current" />
                     </button>
                   </div>
 
                   {/* Right: Loop & Translate */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={() => { if (currentSentenceIdx !== -1) toggleLoop(currentSentenceIdx); }}
-                      className={`p-2 rounded-lg border transition-all ${loopingSentenceIdxRef.current !== null ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-white text-slate-400 border-slate-200'}`}
+                      className={`p-1.5 rounded-lg border transition-all ${loopingSentenceIdxRef.current !== null ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-white text-slate-400 border-slate-200'}`}
                     >
-                      <Repeat size={18} />
+                      <Repeat size={16} />
                     </button>
                     <button
                       onClick={() => setShowTranslations(!showTranslations)}
-                      className={`p-2 rounded-lg border transition-all ${showTranslations ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-white text-slate-400 border-slate-200'}`}
+                      className={`p-1.5 rounded-lg border transition-all ${showTranslations ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-white text-slate-400 border-slate-200'}`}
                     >
-                      <Languages size={18} />
+                      <Languages size={16} />
                     </button>
                   </div>
 
