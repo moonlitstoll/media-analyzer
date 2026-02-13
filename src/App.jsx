@@ -214,6 +214,7 @@ const App = () => {
   const [showFileList, setShowFileList] = useState(false);
   const [cacheKeys, setCacheKeys] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSwitchingFile, setIsSwitchingFile] = useState(false);
 
 
   const videoRef = useRef(null);
@@ -511,6 +512,20 @@ const App = () => {
     };
   }, [activeFile, findActiveIndex]);
 
+  // Reset switching state when active file changes
+  useEffect(() => {
+    if (isSwitchingFile && activeFileId) {
+      // Small timeout to ensure UI has painted the loading state at least once if needed, 
+      // but strictly we just want to turn it off once the new active file is ready.
+      // Since activeFile is derived from activeFileId, waiting for activeFileId change is correct.
+      // However, we want to ensure the NEW file's isAnalyzing is true before we turn off isSwitchingFile?
+      // Actually, the new file entry created in processFiles has isAnalyzing: true.
+      // So once activeFileId updates to the new ID, activeFile.isAnalyzing will be true.
+      // So we can safely turn off isSwitchingFile.
+      setIsSwitchingFile(false);
+    }
+  }, [activeFileId]);
+
   // Derived current idx for UI (now using state directly)
   const currentSentenceIdx = activeSentenceIdx;
 
@@ -564,10 +579,28 @@ const App = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [mediaUrl, activeFile, togglePlay, toggleLoop, handlePrev, handleNext]);
 
+  // --- STATE RESET LOGIC ---
+  const resetPlayerState = useCallback(() => {
+    setActiveSentenceIdx(-1);
+    setCurrentTime(0);
+    setIsPlaying(false);
+    setLoopingSentenceIdx(null);
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  }, []);
+
   // File Handling
   const processFiles = async (fileList) => {
     setIsDragging(false);
     if (!fileList || fileList.length === 0) return;
+
+    // Force Reset
+    setIsSwitchingFile(true);
+    resetPlayerState();
+
+    console.log("[Upload] Processing files...", fileList);
 
     const newFiles = Array.from(fileList).map(f => ({
       id: Math.random().toString(36).substr(2, 9),
@@ -578,15 +611,17 @@ const App = () => {
       error: null
     }));
 
+    // Add new files. If we want to replace, we could use setFiles(newFiles)
+    // But usually multi-file implies appending. Let's append.
     setFiles(prev => [...prev, ...newFiles]);
 
-    // If no active file, set first new one
-    if (!activeFileId && newFiles.length > 0) {
-      setActiveFileId(newFiles[0].id);
-    } else if (files.length === 0 && newFiles.length > 0) {
+    // Immediately set the first new file as active
+    if (newFiles.length > 0) {
+      // Clear old active file data reference implicitly by switch
       setActiveFileId(newFiles[0].id);
     }
 
+    // Process each new file
     newFiles.forEach(async (fItem) => {
       try {
         if (!apiKey) throw new Error("Please set Gemini API Key in Settings.");
@@ -598,10 +633,13 @@ const App = () => {
         if (cached) {
           console.log("Using cached analysis for", fItem.file.name);
           const rawData = JSON.parse(cached);
-          const data = sanitizeData(rawData); // Sort & Sanitize
+          const data = sanitizeData(rawData);
           setFiles(prev => prev.map(p => p.id === fItem.id ? { ...p, data: data, isAnalyzing: false } : p));
         } else {
-          // No cache -> Call API
+          // API Call
+          // Update status to analyzing (redundant but safe)
+          setFiles(prev => prev.map(p => p.id === fItem.id ? { ...p, isAnalyzing: true } : p));
+
           let rawData;
           try {
             rawData = await analyzeMedia(fItem.file, apiKey);
@@ -611,13 +649,12 @@ const App = () => {
 
           if (!rawData) throw new Error("Received empty data from API");
 
-          const data = sanitizeData(rawData); // Sort & Sanitize
+          const data = sanitizeData(rawData);
 
           if (data.length === 0) {
             throw new Error("Analysis returned no valid text data.");
           }
 
-          // Save to Cache (Sorted)
           try {
             localStorage.setItem(cacheKey, JSON.stringify(data));
           } catch (e) {
@@ -907,9 +944,95 @@ const App = () => {
         {activeFile ? (
           <div className="flex flex-col h-full">
             <div className="flex-1 w-full overflow-y-auto bg-[#F8FAFC]" onClick={() => { setShowSpeedMenu(false); setShowFileList(false); }}>
-              {headerElement}
+
+              {/* Header Element - Now Inside Scroll View but Sticky-ish behavior if needed, 
+                  but user asked for non-fixed. 
+                  NOTE: Top Bar Sync Logic Implemented Here 
+              */}
+              <header className="flex-none bg-white border-b border-slate-200 flex items-center justify-between px-4 py-3 z-20 shadow-sm relative">
+                <div className="flex-1 min-w-0">
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowCacheHistory(true)}
+                      className="w-full text-center px-4 py-2 hover:bg-slate-50 rounded-xl transition-colors group"
+                    >
+                      <div className="flex items-center justify-center gap-2 text-slate-900">
+                        {/* Icon based on file type */}
+                        {activeFile.file.type.startsWith('video') ? (
+                          <FileVideo size={16} className={`shrink-0 ${isAnalyzing || isSwitchingFile ? 'text-slate-400 animate-pulse' : 'text-indigo-600'}`} />
+                        ) : (
+                          <FileAudio size={16} className={`shrink-0 ${isAnalyzing || isSwitchingFile ? 'text-slate-400 animate-pulse' : 'text-indigo-600'}`} />
+                        )}
+
+                        {/* Text Binding with Analyzing State */}
+                        <span className={`text-lg font-bold truncate group-hover:text-indigo-700 transition-colors ${isAnalyzing || isSwitchingFile ? 'text-slate-500 italic' : ''}`}>
+                          {isAnalyzing || isSwitchingFile ? `Analyzing... ${activeFile.file.name}` : activeFile.file.name}
+                        </span>
+                      </div>
+                    </button>
+
+                    {/* File List Popup (kept as is, just ensured it uses same logic if needed) */}
+                    {showFileList && (
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-100 p-2 z-50 animate-in zoom-in-95 duration-200">
+                        {/* ... existing file list content ... */}
+                        {/* NOTE: We aren't changing the inner content of FileList popup in this block, 
+                             so we can assume it renders standard file list. 
+                             However, to be safe and clean, we should just keep the existing `headerElement` variable
+                             concept or strictly inline it here.
+                             The previous code defined `headerElement` outside.
+                             Let's inline it to ensure state binding is fresh. 
+                         */}
+                        {/* Actually, the previous code used `headerElement` variable. 
+                             I will REPLACE the usage of `headerElement` with this inline code 
+                             to ensure it re-renders with state changes correctly.
+                         */}
+                        <div className="flex items-center justify-between px-2 py-1 mb-2 border-b border-slate-50">
+                          <span className="text-xs font-bold text-slate-500 uppercase">Active Files</span>
+                          <label className="cursor-pointer text-indigo-600 hover:text-indigo-700 p-1 rounded hover:bg-indigo-50" title="Add File">
+                            <Plus size={16} />
+                            <input type="file" multiple className="hidden" onChange={(e) => { processFiles(e.target.files); setShowFileList(false); }} accept="audio/*,video/*" />
+                          </label>
+                        </div>
+                        <div className="max-h-60 overflow-y-auto space-y-1">
+                          {files.length === 0 ? (
+                            <div className="text-center py-4 text-slate-400 text-sm">No files added</div>
+                          ) : (
+                            files.map(f => (
+                              <div
+                                key={f.id}
+                                onClick={() => {
+                                  // FORCE RESET ON SWITCH
+                                  if (activeFileId !== f.id) {
+                                    setIsSwitchingFile(true);
+                                    resetPlayerState();
+                                    setActiveFileId(f.id);
+                                  }
+                                  setShowFileList(false);
+                                }}
+                                className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${f.id === activeFileId ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 text-slate-700'}`}
+                              >
+                                {f.file.type.startsWith('video') ? <FileVideo size={14} /> : <FileAudio size={14} />}
+                                <span className="text-sm font-medium truncate flex-1">{f.file.name}</span>
+                                <button onClick={(e) => removeFile(f.id, e)} className="p-1 text-slate-300 hover:text-red-500 rounded"><X size={14} /></button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        {files.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-slate-50">
+                            <button onClick={removeAllFiles} className="w-full py-1.5 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1">
+                              <Trash2 size={12} /> Clear All Files
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </header>
+
               <div className="max-w-6xl mx-auto px-0.5 py-4 sm:px-2 md:p-6 pb-32">
-                {isAnalyzing ? (
+                {isAnalyzing || isSwitchingFile ? (
                   <div className="flex flex-col items-center justify-center py-20 space-y-6">
                     <div className="relative w-20 h-20">
                       <div className="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
@@ -931,7 +1054,9 @@ const App = () => {
                     <p>Analysis complete but no text found.</p>
                   </div>
                 ) : (
-                  <div className="space-y-4 min-h-[200px]">
+                  // KEY-SWITCHING IMPLEMENTATION
+                  // key={activeFileId} forces a full remount of this container when file changes
+                  <div key={activeFileId} className="space-y-4 min-h-[200px]">
                     <ErrorBoundary>
                       {transcriptData.map((item, idx) => {
                         const isActive = idx === currentSentenceIdx;
@@ -1185,37 +1310,45 @@ const App = () => {
         showCacheHistory && (
           <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl h-[95vh] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white z-10">
-                <div className="flex items-center gap-3">
-                  <div className="bg-indigo-50 p-2 rounded-xl">
-                    <List size={24} className="text-indigo-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900">File & Analysis Management</h2>
-                    <p className="text-xs text-slate-500 font-medium">Manage your transcripts and files</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setShowCacheHistory(false)} className="p-2 hover:bg-red-50 hover:text-red-500 rounded-xl transition-colors">
-                    <X size={24} className="text-slate-400 hover:text-red-500" />
-                  </button>
-                </div>
+              <div className="p-4 border-b border-slate-100 flex items-center justify-end shrink-0 bg-white z-10">
+                <button onClick={() => setShowCacheHistory(false)} className="p-2 hover:bg-red-50 hover:text-red-500 rounded-xl transition-colors">
+                  <X size={24} className="text-slate-400 hover:text-red-500" />
+                </button>
               </div>
 
               <div className="flex-1 overflow-hidden flex flex-col bg-slate-50/50">
                 {/* Visual Header / Controls */}
                 <div className="p-4 sm:p-6 space-y-4">
                   {/* Upload Button */}
-                  <label className="flex items-center justify-center gap-3 w-full p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl cursor-pointer shadow-lg shadow-indigo-200 transition-all group">
-                    <div className="p-2 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
-                      <Upload size={24} />
-                    </div>
-                    <div>
-                      <span className="block text-lg font-bold">Upload New File</span>
-                      <span className="text-xs text-indigo-200">Audio or Video support</span>
-                    </div>
-                    <input type="file" multiple className="hidden" onChange={(e) => { processFiles(e.target.files); setShowCacheHistory(false); }} accept="audio/*,video/*" />
-                  </label>
+                  <div className="relative">
+                    <label
+                      htmlFor="manager-file-upload"
+                      className="flex items-center justify-center gap-3 w-full p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl cursor-pointer shadow-lg shadow-indigo-200 transition-all group"
+                    >
+                      <div className="p-2 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
+                        <Upload size={24} />
+                      </div>
+                      <div>
+                        <span className="block text-lg font-bold">Upload New File</span>
+                        <span className="text-xs text-indigo-200">Audio or Video support</span>
+                      </div>
+                    </label>
+                    <input
+                      id="manager-file-upload"
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        if (files && files.length > 0) {
+                          processFiles(files);
+                          e.target.value = '';
+                          setShowCacheHistory(false);
+                        }
+                      }}
+                      accept="audio/*,video/*"
+                    />
+                  </div>
 
                   {/* Search Bar */}
                   <div className="relative">
