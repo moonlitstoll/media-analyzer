@@ -1338,69 +1338,116 @@ const App = () => {
                   </div>
                 </div>
 
-                {/* List */}
-                <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-6 space-y-3">
-                  {cacheKeys.length === 0 ? (
-                    <div className="text-center py-20 text-slate-400">
-                      <Clock size={48} className="mx-auto mb-4 opacity-20" />
-                      <p className="text-lg font-medium">No history found</p>
-                      <p className="text-sm">Upload a file to start analyzing</p>
-                    </div>
-                  ) : (
-                    cacheKeys
-                      .filter(key => key.toLowerCase().includes(searchQuery.toLowerCase()))
-                      .sort().reverse().map(key => {
-                        const name = key.replace('gemini_analysis_', '');
-                        const isActive = activeFile?.file?.name === name; // Simple check by name
+                {
+                  /* List - Merged Analyzing & Cached */
+                  (() => {
+                    const analyzingFiles = files.filter(f => f.isAnalyzing);
+                    const filteredCacheKeys = cacheKeys.filter(key => key.toLowerCase().includes(searchQuery.toLowerCase()));
 
-                        return (
+                    if (analyzingFiles.length === 0 && filteredCacheKeys.length === 0) {
+                      return (
+                        <div className="text-center py-20 text-slate-400">
+                          <Clock size={48} className="mx-auto mb-4 opacity-20" />
+                          <p className="text-lg font-medium">No history found</p>
+                          <p className="text-sm">Upload a file to start analyzing</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-6 space-y-3">
+                        {/* 1. Analyzing Files */}
+                        {analyzingFiles.map(f => (
                           <div
-                            key={key}
-                            className={`
-                              group flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all
-                              ${isActive
-                                ? 'bg-indigo-50 border-indigo-200 shadow-md shadow-indigo-100'
-                                : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}
-                            `}
-                            onClick={() => loadCache(key)}
+                            key={f.id}
+                            className="group flex items-center justify-between p-4 rounded-2xl border bg-indigo-50/50 border-indigo-200 shadow-sm"
                           >
                             <div className="flex items-center gap-4 min-w-0 flex-1">
-                              <div className={`p-3 rounded-xl ${isActive ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                                {isActive ? <Check size={20} /> : <BookOpen size={20} />}
+                              <div className="p-3 rounded-xl bg-indigo-100 text-indigo-600 animate-pulse">
+                                <FileVideo size={20} />
                               </div>
                               <div className="min-w-0">
-                                <p className={`text-base font-bold truncate ${isActive ? 'text-indigo-900' : 'text-slate-700'}`}>{name}</p>
-                                <p className={`text-xs font-medium mt-0.5 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`}>
-                                  {isActive ? 'CURRENTLY ACTIVE' : 'CACHED VERSION'}
+                                <p className="text-base font-bold truncate text-indigo-900">{f.file.name}</p>
+                                <p className="text-xs font-medium mt-0.5 text-indigo-600 animate-pulse">
+                                  Analyzing...
                                 </p>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 pl-4 border-l border-slate-100/50 ml-4">
+                            <div className="flex items-center gap-2 pl-4 border-l border-indigo-100 ml-4">
+                              <div className="hidden sm:flex items-center gap-2 mr-2">
+                                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-ping" />
+                                <span className="text-xs font-bold text-indigo-500">Processing</span>
+                              </div>
+                              {/* Delete Disabled for analyzing files usually, or cancel? For now, allow remove */}
                               <button
-                                onClick={(e) => { e.stopPropagation(); deleteCache(key); }}
-                                className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                                title="Delete Analysis"
+                                onClick={(e) => removeFile(f.id, e)}
+                                className="p-2.5 text-indigo-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                                title="Cancel Analysis"
                               >
-                                <Trash2 size={20} />
+                                <X size={20} />
                               </button>
                             </div>
                           </div>
-                        );
-                      })
-                  )}
+                        ))}
 
-                  {cacheKeys.length > 0 && (
-                    <div className="pt-4 mt-4 border-t border-slate-200/50">
-                      <button
-                        onClick={clearAllCache}
-                        className="w-full py-4 text-slate-500 font-bold hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
-                      >
-                        <Trash2 size={16} /> Clear All History
-                      </button>
-                    </div>
-                  )}
-                </div>
+                        {/* 2. Cached Files */}
+                        {filteredCacheKeys
+                          .sort().reverse().map(key => {
+                            const name = key.replace('gemini_analysis_', '');
+                            const isActive = activeFile?.file?.name === name; // Simple check by name
+
+                            return (
+                              <div
+                                key={key}
+                                className={`
+                                  group flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all
+                                  ${isActive
+                                    ? 'bg-indigo-50 border-indigo-200 shadow-md shadow-indigo-100'
+                                    : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}
+                                `}
+                                onClick={() => loadCache(key)}
+                              >
+                                <div className="flex items-center gap-4 min-w-0 flex-1">
+                                  <div className={`p-3 rounded-xl ${isActive ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                    {isActive ? <Check size={20} /> : <BookOpen size={20} />}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className={`text-base font-bold truncate ${isActive ? 'text-indigo-900' : 'text-slate-700'}`}>{name}</p>
+                                    <p className={`text-xs font-medium mt-0.5 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`}>
+                                      {isActive ? 'CURRENTLY ACTIVE' : 'CACHED VERSION'}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 pl-4 border-l border-slate-100/50 ml-4">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); deleteCache(key); }}
+                                    className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                                    title="Delete Analysis"
+                                  >
+                                    <Trash2 size={20} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })
+                        }
+
+                        {cacheKeys.length > 0 && (
+                          <div className="pt-4 mt-4 border-t border-slate-200/50">
+                            <button
+                              onClick={clearAllCache}
+                              className="w-full py-4 text-slate-500 font-bold hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+                            >
+                              <Trash2 size={16} /> Clear All History
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()
+                }
               </div>
             </div>
           </div>
