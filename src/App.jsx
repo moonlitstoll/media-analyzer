@@ -821,6 +821,82 @@ const App = () => {
   }
 
   // View: Main Workspace
+
+  const headerElement = (
+    <header className="flex-none bg-white border-b border-slate-200 flex items-center justify-between px-4 py-3 z-20 shadow-sm relative">
+      <div className="flex items-center gap-3">
+        <div className="bg-indigo-600 text-white p-1.5 rounded-lg">
+          <Volume2 size={18} />
+        </div>
+        <h1 className="text-lg font-bold text-slate-900 hidden sm:block">MediaSmart</h1>
+      </div>
+
+      {/* Center: File List Popup Trigger */}
+      <div className="relative">
+        <button
+          onClick={() => setShowFileList(!showFileList)}
+          className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors max-w-[200px]"
+        >
+          {activeFile ? (
+            <>
+              {activeFile.file.type.startsWith('video') ? <FileVideo size={14} className="text-indigo-600" /> : <FileAudio size={14} className="text-indigo-600" />}
+              <span className="text-sm font-bold text-slate-700 truncate">{activeFile.file.name}</span>
+              <ChevronDown size={14} className="text-slate-400" />
+            </>
+          ) : (
+            <span className="text-sm text-slate-500">Select File...</span>
+          )}
+        </button>
+
+        {/* File List Popup */}
+        {showFileList && (
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-100 p-2 z-50 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-2 py-1 mb-2 border-b border-slate-50">
+              <span className="text-xs font-bold text-slate-500 uppercase">Active Files</span>
+              <label className="cursor-pointer text-indigo-600 hover:text-indigo-700 p-1 rounded hover:bg-indigo-50" title="Add File">
+                <Plus size={16} />
+                <input type="file" multiple className="hidden" onChange={(e) => { processFiles(e.target.files); setShowFileList(false); }} accept="audio/*,video/*" />
+              </label>
+            </div>
+            <div className="max-h-60 overflow-y-auto space-y-1">
+              {files.length === 0 ? (
+                <div className="text-center py-4 text-slate-400 text-sm">No files added</div>
+              ) : (
+                files.map(f => (
+                  <div
+                    key={f.id}
+                    onClick={() => { setActiveFileId(f.id); setShowFileList(false); }}
+                    className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${f.id === activeFileId ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 text-slate-700'}`}
+                  >
+                    {f.file.type.startsWith('video') ? <FileVideo size={14} /> : <FileAudio size={14} />}
+                    <span className="text-sm font-medium truncate flex-1">{f.file.name}</span>
+                    <button onClick={(e) => removeFile(f.id, e)} className="p-1 text-slate-300 hover:text-red-500 rounded"><X size={14} /></button>
+                  </div>
+                ))
+              )}
+            </div>
+            {files.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-slate-50">
+                <button onClick={removeAllFiles} className="w-full py-1.5 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1">
+                  <Trash2 size={12} /> Clear All Files
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        {/* Settings Button -> Now History/Cache */}
+        <button
+          onClick={() => setShowCacheHistory(true)}
+          className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+        >
+          <Settings size={20} />
+        </button>
+      </div>
+    </header>
+  );
   return (
     <div
       onDragOver={onDragOver}
@@ -835,89 +911,7 @@ const App = () => {
         </div>
       )}
 
-      {/* Header - Non-fixed, scrolls with page */}
-      <header className="flex-none bg-white border-b border-slate-200 flex items-center justify-between px-4 py-3 z-20 shadow-sm relative">
-        <div className="flex items-center gap-3">
-          <div className="bg-indigo-600 text-white p-1.5 rounded-lg">
-            <Volume2 size={18} />
-          </div>
-          <h1 className="text-lg font-bold text-slate-900 hidden sm:block">MediaSmart</h1>
-        </div>
-
-        {/* Center: File List Popup Trigger */}
-        <div className="relative">
-          <button
-            onClick={() => setShowFileList(!showFileList)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors max-w-[200px]"
-          >
-            {activeFile ? (
-              <>
-                {activeFile.file.type.startsWith('video') ? <FileVideo size={14} className="text-indigo-600" /> : <FileAudio size={14} className="text-indigo-600" />}
-                <span className="text-sm font-bold text-slate-700 truncate">{activeFile.file.name}</span>
-                <ChevronDown size={14} className="text-slate-400" />
-              </>
-            ) : (
-              <span className="text-sm text-slate-500">Select File...</span>
-            )}
-          </button>
-
-          {/* File List Popup */}
-          {showFileList && (
-            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-100 p-2 z-50 animate-in zoom-in-95 duration-200">
-              <div className="flex items-center justify-between px-2 py-1 mb-2 border-b border-slate-50">
-                <span className="text-xs font-bold text-slate-500 uppercase">Active Files</span>
-                <label className="cursor-pointer text-indigo-600 hover:text-indigo-700 p-1 rounded hover:bg-indigo-50" title="Add File">
-                  <Plus size={16} />
-                  <input type="file" multiple className="hidden" onChange={(e) => { processFiles(e.target.files); setShowFileList(false); }} accept="audio/*,video/*" />
-                </label>
-              </div>
-              <div className="max-h-60 overflow-y-auto space-y-1">
-                {files.length === 0 ? (
-                  <div className="text-center py-4 text-slate-400 text-sm">No files added</div>
-                ) : (
-                  files.map(f => (
-                    <div
-                      key={f.id}
-                      onClick={() => { setActiveFileId(f.id); setShowFileList(false); }}
-                      className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${f.id === activeFileId ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 text-slate-700'}`}
-                    >
-                      {f.file.type.startsWith('video') ? <FileVideo size={14} /> : <FileAudio size={14} />}
-                      <span className="text-sm font-medium truncate flex-1">{f.file.name}</span>
-                      <button onClick={(e) => removeFile(f.id, e)} className="p-1 text-slate-300 hover:text-red-500 rounded"><X size={14} /></button>
-                    </div>
-                  ))
-                )}
-              </div>
-              {files.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-slate-50">
-                  <button onClick={removeAllFiles} className="w-full py-1.5 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1">
-                    <Trash2 size={12} /> Clear All Files
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Cache History Button */}
-          <button
-            onClick={() => setShowCacheHistory(true)}
-            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-            title="History"
-          >
-            <History size={20} />
-          </button>
-
-          {/* Settings Button -> Now History/Cache */}
-          <button
-            onClick={() => setShowCacheHistory(true)}
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <Settings size={20} />
-          </button>
-        </div>
-      </header>
+      {/* Header moved to inside scrollable areas */}
 
       {/* Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
@@ -926,6 +920,7 @@ const App = () => {
         {activeFile ? (
           <div className="flex flex-col h-full">
             <div className="flex-1 w-full overflow-y-auto bg-[#F8FAFC]" onClick={() => { setShowSpeedMenu(false); setShowFileList(false); }}>
+              {headerElement}
               <div className="max-w-6xl mx-auto px-0.5 py-4 sm:px-2 md:p-6 pb-32">
                 {isAnalyzing ? (
                   <div className="flex flex-col items-center justify-center py-20 space-y-6">
@@ -1100,21 +1095,24 @@ const App = () => {
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center p-10">
-            <div className="max-w-md w-full p-8 bg-white rounded-3xl border-2 border-dashed border-slate-200 text-center space-y-4">
-              <div className="inline-flex p-4 bg-slate-50 rounded-2xl text-slate-400">
-                <FileAudio size={32} />
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+            {headerElement}
+            <div className="flex-1 flex items-center justify-center p-10">
+              <div className="max-w-md w-full p-8 bg-white rounded-3xl border-2 border-dashed border-slate-200 text-center space-y-4">
+                <div className="inline-flex p-4 bg-slate-50 rounded-2xl text-slate-400">
+                  <FileAudio size={32} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800">No active file</h3>
+                  <p className="text-slate-500 mt-1">Upload or select a file to start the analysis.</p>
+                </div>
+                <button
+                  onClick={() => setShowFileList(true)}
+                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-100"
+                >
+                  Select from List
+                </button>
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-slate-800">No active file</h3>
-                <p className="text-slate-500 mt-1">Upload or select a file to start the analysis.</p>
-              </div>
-              <button
-                onClick={() => setShowFileList(true)}
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-100"
-              >
-                Select from List
-              </button>
             </div>
           </div>
         )}
