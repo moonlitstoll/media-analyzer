@@ -524,6 +524,11 @@ const App = () => {
     let rAF;
 
     const runSync = () => {
+      // SAFETY GUARD: If media or transcript is gone, terminate loop immediately!
+      if (!v || !transcriptRef.current || transcriptRef.current.length === 0) {
+        return;
+      }
+
       const now = v.currentTime;
       setCurrentTime(now);
 
@@ -538,14 +543,14 @@ const App = () => {
       // 2. Loop Logic
       const loopIdx = loopingSentenceIdxRef.current;
       if (loopIdx !== null) {
-        const item = activeFile.data[loopIdx];
+        const item = transcriptRef.current[loopIdx];
         if (item) {
           const start = Math.max(0, item.seconds - BUFFER_SECONDS);
-          const end = (loopIdx < activeFile.data.length - 1)
-            ? activeFile.data[loopIdx + 1].seconds + BUFFER_SECONDS
+          const end = (loopIdx < transcriptRef.current.length - 1)
+            ? transcriptRef.current[loopIdx + 1].seconds + BUFFER_SECONDS
             : v.duration + BUFFER_SECONDS;
 
-          if (now >= end - 0.1 || (v.ended && loopIdx === activeFile.data.length - 1)) {
+          if (now >= end - 0.1 || (v.ended && loopIdx === transcriptRef.current.length - 1)) {
             v.currentTime = start;
             v.play().catch(() => { });
           }
@@ -555,8 +560,10 @@ const App = () => {
       rAF = requestAnimationFrame(runSync);
     };
 
-    // Start immediately
-    rAF = requestAnimationFrame(runSync);
+    // Start only if activeFile exists
+    if (activeFile?.data) {
+      rAF = requestAnimationFrame(runSync);
+    }
 
     return () => {
       if (rAF) cancelAnimationFrame(rAF);
@@ -963,9 +970,11 @@ const App = () => {
       )}
 
       {/* Debug Monitor */}
-      <div className="fixed top-0 left-0 z-[9999] pointer-events-none p-1 bg-black/80 text-[10px] font-mono font-bold text-red-500 rounded-br-lg shadow-lg">
-        [DEBUG] Time: {currentTime.toFixed(2)}s | Active Idx: {currentSentenceIdx} | Target Time: {currentSentenceIdx !== -1 && transcriptData[currentSentenceIdx] ? (typeof transcriptData[currentSentenceIdx].seconds === 'number' ? transcriptData[currentSentenceIdx].seconds : parseFloat(transcriptData[currentSentenceIdx].seconds)).toFixed(2) : 'N/A'}s | Found via Reverse Scan
-      </div>
+      {activeFile && (
+        <div className="fixed top-0 left-0 z-[9999] pointer-events-none p-1 bg-black/80 text-[10px] font-mono font-bold text-red-500 rounded-br-lg shadow-lg">
+          [DEBUG] Time: {currentTime.toFixed(2)}s | Active Idx: {currentSentenceIdx} | Target Time: {currentSentenceIdx !== -1 && transcriptData[currentSentenceIdx] ? (typeof transcriptData[currentSentenceIdx].seconds === 'number' ? transcriptData[currentSentenceIdx].seconds : parseFloat(transcriptData[currentSentenceIdx].seconds)).toFixed(2) : 'N/A'}s | Found via Reverse Scan
+        </div>
+      )}
 
       {/* Header - Now Sticky & Compact */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 flex-none h-14 sm:h-16 flex items-center justify-between px-3 sm:px-6">
