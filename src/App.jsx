@@ -221,6 +221,12 @@ const App = () => {
   const videoRef = useRef(null);
   const activeIdxRef = useRef(null);
   const loopingSentenceIdxRef = useRef(null);
+  const transcriptRef = useRef([]);
+
+  // Sync ref with state
+  useEffect(() => {
+    transcriptRef.current = transcriptData;
+  }, [transcriptData]);
 
   // Derived active file
   const activeFile = files.find(f => f.id === activeFileId);
@@ -492,20 +498,20 @@ const App = () => {
 
   // --- SYNC ENGINE (High-Precision 100ms) ---
 
-  // Precise Index Calculation (Stateless "Last-Available" Lookup)
-  const findActiveIndex = useCallback((time, data) => {
+  // Precise Index Calculation (Stateless "Reverse Scan" Lookup)
+  const findActiveIndex = useCallback((time) => {
+    const data = transcriptRef.current;
     if (!data || data.length === 0) return -1;
 
-    let lastIdx = -1;
-    for (let i = 0; i < data.length; i++) {
-      if (data[i].seconds <= time) {
-        lastIdx = i;
-      } else {
-        // Since data is sorted, we can stop early
-        break;
+    // BACKWARDS LOOP: Find first item from the end that is <= time
+    for (let i = data.length - 1; i >= 0; i--) {
+      // Safety: ensure it's a number
+      const startTime = typeof data[i].seconds === 'number' ? data[i].seconds : parseFloat(data[i].seconds || 0);
+      if (startTime <= time) {
+        return i;
       }
     }
-    return lastIdx;
+    return -1;
   }, []);
 
   // Sync Loop (High-Performance requestAnimationFrame)
@@ -521,8 +527,8 @@ const App = () => {
       const now = v.currentTime;
       setCurrentTime(now);
 
-      // 1. Find Current Index (Stateless)
-      const newIdx = findActiveIndex(now, activeFile.data);
+      // 1. Find Current Index (Reverse Scan via Ref)
+      const newIdx = findActiveIndex(now);
 
       if (newIdx !== activeIdxRef.current) {
         activeIdxRef.current = newIdx;
@@ -958,7 +964,7 @@ const App = () => {
 
       {/* Debug Monitor */}
       <div className="fixed top-0 left-0 z-[9999] pointer-events-none p-1 bg-black/80 text-[10px] font-mono font-bold text-red-500 rounded-br-lg shadow-lg">
-        [DEBUG] Time: {currentTime.toFixed(2)}s | Active Idx: {currentSentenceIdx} | Target Time: {currentSentenceIdx !== -1 && transcriptData[currentSentenceIdx] ? transcriptData[currentSentenceIdx].seconds.toFixed(2) : 'N/A'}s
+        [DEBUG] Time: {currentTime.toFixed(2)}s | Active Idx: {currentSentenceIdx} | Target Time: {currentSentenceIdx !== -1 && transcriptData[currentSentenceIdx] ? (typeof transcriptData[currentSentenceIdx].seconds === 'number' ? transcriptData[currentSentenceIdx].seconds : parseFloat(transcriptData[currentSentenceIdx].seconds)).toFixed(2) : 'N/A'}s | Found via Reverse Scan
       </div>
 
       {/* Header - Now Sticky & Compact */}
