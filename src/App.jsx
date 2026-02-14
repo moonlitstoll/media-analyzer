@@ -500,16 +500,23 @@ const App = () => {
 
   // Precise Index Calculation (Stateless "Reverse Scan" Lookup)
   const findActiveIndex = useCallback((time) => {
-    const data = transcriptRef.current;
-    if (!data || data.length === 0) return -1;
+    try {
+      const data = transcriptRef.current;
+      if (!data || data.length === 0) return -1;
 
-    // BACKWARDS LOOP: Find first item from the end that is <= time
-    for (let i = data.length - 1; i >= 0; i--) {
-      // Safety: ensure it's a number
-      const startTime = typeof data[i].seconds === 'number' ? data[i].seconds : parseFloat(data[i].seconds || 0);
-      if (startTime <= time) {
-        return i;
+      // BACKWARDS LOOP: Find first item from the end that is <= time
+      for (let i = data.length - 1; i >= 0; i--) {
+        const item = data[i];
+        if (!item) continue;
+
+        // Safety: ensure it's a number
+        const startTime = typeof item.seconds === 'number' ? item.seconds : parseFloat(item.seconds || 0);
+        if (startTime <= time) {
+          return i;
+        }
       }
+    } catch (e) {
+      console.warn("Index lookup error:", e);
     }
     return -1;
   }, []);
@@ -524,37 +531,44 @@ const App = () => {
     let rAF;
 
     const runSync = () => {
-      // SAFETY GUARD: If media or transcript is gone, terminate loop immediately!
-      if (!v || !transcriptRef.current || transcriptRef.current.length === 0) {
-        return;
-      }
+      try {
+        // SAFETY GUARD: Use optional chaining and null checks
+        const vRef = videoRef.current;
+        const tData = transcriptRef.current;
 
-      const now = v.currentTime;
-      setCurrentTime(now);
+        if (!vRef || !tData || tData.length === 0) {
+          return;
+        }
 
-      // 1. Find Current Index (Reverse Scan via Ref)
-      const newIdx = findActiveIndex(now);
+        const now = vRef.currentTime;
+        setCurrentTime(now);
 
-      if (newIdx !== activeIdxRef.current) {
-        activeIdxRef.current = newIdx;
-        setActiveSentenceIdx(newIdx);
-      }
+        // 1. Find Current Index (Reverse Scan via Ref)
+        const newIdx = findActiveIndex(now);
 
-      // 2. Loop Logic
-      const loopIdx = loopingSentenceIdxRef.current;
-      if (loopIdx !== null) {
-        const item = transcriptRef.current[loopIdx];
-        if (item) {
-          const start = Math.max(0, item.seconds - BUFFER_SECONDS);
-          const end = (loopIdx < transcriptRef.current.length - 1)
-            ? transcriptRef.current[loopIdx + 1].seconds + BUFFER_SECONDS
-            : v.duration + BUFFER_SECONDS;
+        if (newIdx !== activeIdxRef.current) {
+          activeIdxRef.current = newIdx;
+          setActiveSentenceIdx(newIdx);
+        }
 
-          if (now >= end - 0.1 || (v.ended && loopIdx === transcriptRef.current.length - 1)) {
-            v.currentTime = start;
-            v.play().catch(() => { });
+        // 2. Loop Logic
+        const loopIdx = loopingSentenceIdxRef.current;
+        if (loopIdx !== null) {
+          const item = tData[loopIdx];
+          if (item) {
+            const start = Math.max(0, item.seconds - BUFFER_SECONDS);
+            const end = (loopIdx < tData.length - 1)
+              ? (tData[loopIdx + 1]?.seconds || vRef.duration) + BUFFER_SECONDS
+              : vRef.duration + BUFFER_SECONDS;
+
+            if (now >= end - 0.1 || (vRef.ended && loopIdx === tData.length - 1)) {
+              vRef.currentTime = start;
+              vRef.play().catch(() => { });
+            }
           }
         }
+      } catch (e) {
+        console.warn("Sync loop error:", e);
       }
 
       rAF = requestAnimationFrame(runSync);
@@ -972,7 +986,7 @@ const App = () => {
       {/* Debug Monitor */}
       {activeFile && (
         <div className="fixed top-0 left-0 z-[9999] pointer-events-none p-1 bg-black/80 text-[10px] font-mono font-bold text-red-500 rounded-br-lg shadow-lg">
-          [DEBUG] Time: {currentTime.toFixed(2)}s | Active Idx: {currentSentenceIdx} | Target Time: {currentSentenceIdx !== -1 && transcriptData[currentSentenceIdx] ? (typeof transcriptData[currentSentenceIdx].seconds === 'number' ? transcriptData[currentSentenceIdx].seconds : parseFloat(transcriptData[currentSentenceIdx].seconds)).toFixed(2) : 'N/A'}s | Found via Reverse Scan
+          [DEBUG] Time: {currentTime?.toFixed(2)}s | Active Idx: {currentSentenceIdx} | Target Time: {currentSentenceIdx !== -1 && transcriptData?.[currentSentenceIdx] ? (typeof transcriptData[currentSentenceIdx].seconds === 'number' ? transcriptData[currentSentenceIdx].seconds : parseFloat(transcriptData[currentSentenceIdx].seconds || 0)).toFixed(2) : 'N/A'}s | Found via Reverse Scan
         </div>
       )}
 
