@@ -299,6 +299,11 @@ const App = () => {
           endSeconds = endValue;
         }
 
+        // DEDUPLICATION FIX: Never drop items. If text is empty, provide a placeholder.
+        if (!text || text.trim() === "" || text === "(No text)") {
+          text = "(연주중 / 반주 구간)";
+        }
+
         return {
           timestamp,
           seconds,
@@ -310,7 +315,6 @@ const App = () => {
           isAnalyzed: !!(item.p || item.patterns || item.w || item.words)
         };
       })
-      .filter(item => item.text && item.text !== "(No text)")
       .sort((a, b) => a.seconds - b.seconds);
   };
 
@@ -493,22 +497,25 @@ const App = () => {
   // Quick Sync Handler Removed
 
 
-  // Sticky Index Search (The Sticky Rule)
+  // 4-STEP EXPLICIT SYNC ENGINE (Commanded Logic)
   const findActiveIndex = useCallback((time, data) => {
     if (!data || data.length === 0) return -1;
 
-    // Logic: Find the LAST item that has already started (startTime <= currentTime)
-    // This pins the highlight during gaps until the next lyric arrives.
-    let lastStartedIdx = -1;
+    // 1. FILTER: Start Time <= Current Time
+    const candidates = [];
     for (let i = 0; i < data.length; i++) {
       if (data[i].seconds <= time) {
-        lastStartedIdx = i;
-      } else {
-        // Since data is sorted, we can stop early
-        break;
+        candidates.push({ originalIndex: i, seconds: data[i].seconds });
       }
     }
-    return lastStartedIdx;
+
+    if (candidates.length === 0) return -1;
+
+    // 2. SORT: Descending by Start Time
+    candidates.sort((a, b) => b.seconds - a.seconds);
+
+    // 3. SELECT: First Item (The latest one among those that started)
+    return candidates[0].originalIndex;
   }, []);
 
   // Stateless Sync Engine (High-Res Event Listening)
@@ -585,18 +592,7 @@ const App = () => {
       if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
 
       const now = videoRef.current ? videoRef.current.currentTime : 0;
-      // Index detection remains strict on timeline (no buffer for index) to avoid early highlighting
-      // or should it cover the buffer? User said "full sentence played". 
-      // If we seek to -0.8s, the index logic needs to know we are "in" that sentence.
-      // But simple findIndex works on >= seconds. If we are at -0.8s, we are strictly before the sentence.
-      // Ideally, the index logic should also account for the buffer if we want the UI to highlight immediately.
-      // Let's use strict 0.1s timeline for identifying "Active" sentence, but playback allows slack.
-      // Actually, if we seek to -0.8, the PREVIOUS sentence is likely active.
-      // Retaining strict logic for now as per user "strict 0.1s timeline" for display.
-      const data = activeFile.data;
-      const currentIdx = data.findIndex((item, idx) =>
-        now >= item.seconds && (idx === data.length - 1 || now < data[idx + 1].seconds)
-      );
+      const currentIdx = activeSentenceIdx; // Use the globally calculated active index
 
       switch (e.code) {
         case 'Enter': if (currentIdx !== -1) toggleLoop(currentIdx); break;
