@@ -255,8 +255,11 @@ const App = () => {
         let text = item.o || item.text || "(No text)";
         const translation = item.t || item.translation || "";
 
-        // FILTER: Remove non-verbal elements like (music), (applause), etc.
-        text = text.replace(/\([^)]*\)/g, '').replace(/\[[^\]]*\]/g, '').trim();
+        // FILTER: Remove non-verbal elements, but PROTECT fallback markers like (Inaudible)
+        const isFallback = text.includes('(가사/대사 분석 불가 구간)') || text.includes('(Inaudible)');
+        if (!isFallback) {
+          text = text.replace(/\([^)]*\)/g, '').replace(/\[[^\]]*\]/g, '').trim();
+        }
 
         // Handle patterns
         let patterns = item.p || item.patterns || [];
@@ -293,9 +296,9 @@ const App = () => {
           endSeconds = endValue;
         }
 
-        // DEDUPLICATION FIX: Never drop items. If text is empty, provide a placeholder.
+        // DEDUPLICATION & ANTI-GHOSTING: Never drop items. If text is empty, provide a mandatory placeholder.
         if (!text || text.trim() === "" || text === "(No text)") {
-          text = "(연주중 / 반주 구간)";
+          text = "(가사/대사 분석 불가 구간 - Inaudible)";
         }
 
         return {
