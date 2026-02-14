@@ -75,7 +75,7 @@ const TranscriptItem = memo(({
     <div
       ref={itemRef}
       className={`
-        group relative transition-all duration-300 ease-out mb-4 rounded-xl border border-l-[4px] p-3 sm:px-4 sm:py-5
+        group relative transition-all duration-300 ease-out mb-2 rounded-xl border border-l-[4px] p-2.5 sm:px-4 sm:py-5
         ${isActive
           ? 'bg-transparent border-l-purple-700 border-t-slate-100 border-r-slate-100 border-b-slate-100 shadow-md z-10'
           : 'bg-white border-slate-100 opacity-90'}
@@ -91,21 +91,21 @@ const TranscriptItem = memo(({
 
       <div>
         {/* Header: Timestamp */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
           <button
             onClick={() => seekTo(item.seconds)}
             className={`
-              flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-bold font-mono tracking-wide transition-all
+              flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wide transition-all
               ${isActive ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}
             `}
           >
-            <Play size={10} fill="currentColor" /> {item.timestamp}
+            <Play size={8} fill="currentColor" /> {item.timestamp}
           </button>
         </div>
         <div
           onClick={() => jumpToSentence(idx)}
           className={`
-            text-xl sm:text-2xl md:text-3xl leading-relaxed cursor-pointer transition-all duration-300 mb-2 px-1
+            text-xl sm:text-2xl md:text-3xl leading-snug cursor-pointer transition-all duration-300 mb-1 px-1
             ${isActive ? 'text-black font-bold tracking-tight' : 'text-slate-900'}
           `}
         >
@@ -118,15 +118,15 @@ const TranscriptItem = memo(({
         {/* Toggle Global Explanation Button Removed */}
 
         {/* Detailed Analysis Section */}
-        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${showAnalysis ? 'max-h-[2000px] opacity-100 mt-2 pt-2 border-t border-slate-100' : 'max-h-0 opacity-0 mt-0 pt-0'}`}>
+        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${showAnalysis ? 'max-h-[2000px] opacity-100 mt-1 pt-1 border-t border-slate-100' : 'max-h-0 opacity-0 mt-0 pt-0'}`}>
 
           {/* Translation (Always show if showTranslations is true or analysis is expanded) */}
           {(showTranslations || showAnalysis) && item.translation && (
-            <div className={`rounded-xl p-3 border transition-colors duration-300 mb-4 ${showAnalysis ? 'bg-indigo-50/80 border-indigo-100' : 'bg-slate-50/50 border-slate-100'}`}>
-              <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm uppercase tracking-wider mb-1">
-                <Languages size={14} /> Translation
+            <div className={`rounded-xl px-3 py-2 border transition-colors duration-300 mb-2 ${showAnalysis ? 'bg-indigo-50/80 border-indigo-100' : 'bg-slate-50/50 border-slate-100'}`}>
+              <div className="flex items-center gap-1.5 text-indigo-600 font-bold text-[11px] uppercase tracking-wider mb-0.5">
+                <Languages size={12} /> Translation
               </div>
-              <p className="text-slate-700 text-lg leading-relaxed whitespace-pre-line font-medium">{item.translation}</p>
+              <p className="text-slate-700 text-base leading-snug whitespace-pre-line font-medium">{item.translation}</p>
             </div>
           )}
 
@@ -135,16 +135,16 @@ const TranscriptItem = memo(({
           {/* Word Analysis */}
           {item.words && item.words.length > 0 && (
             <div>
-              <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm uppercase tracking-wider mb-3">
-                <BookOpen size={14} /> Word Analysis
+              <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[11px] uppercase tracking-wider mb-1 px-1">
+                <BookOpen size={12} /> Word Analysis
               </div>
               <div className="divide-y divide-slate-100 border border-emerald-100/20 rounded-xl overflow-hidden bg-white">
                 {item.words.map((w, wi) => (
-                  <div key={wi} className="p-1.5 flex items-start gap-2 px-1 sm:px-2 hover:bg-emerald-50/20 transition-colors">
-                    <span className="font-bold text-emerald-700 text-[13px] sm:text-base w-[35%] shrink-0 break-words leading-tight pt-0.5">{w.word}</span>
+                  <div key={wi} className="py-1 px-2 flex items-start gap-2 hover:bg-emerald-50/20 transition-colors">
+                    <span className="font-bold text-emerald-700 text-[13px] sm:text-[15px] w-[35%] shrink-0 break-words leading-tight pt-0.5">{w.word}</span>
                     <div className="flex-1 min-w-0">
-                      <span className="block text-slate-800 text-[13px] sm:text-sm font-bold leading-snug">{w.meaning}</span>
-                      {w.func && <span className="block text-slate-600 text-[12px] sm:text-sm mt-1 whitespace-pre-line leading-relaxed">{w.func}</span>}
+                      <span className="block text-slate-800 text-[13px] sm:text-[14px] font-bold leading-[1.3]">{w.meaning}</span>
+                      {w.func && <span className="block text-slate-600 text-[11px] sm:text-[13px] mt-0.5 whitespace-pre-line leading-relaxed">{w.func}</span>}
                     </div>
                   </div>
                 ))}
@@ -1015,7 +1015,7 @@ const App = () => {
           <div className="flex flex-col h-full">
             <div className="flex-1 w-full overflow-y-auto bg-[#F8FAFC]" onClick={() => { setShowSpeedMenu(false); setShowFileList(false); }}>
 
-              <div className="max-w-6xl mx-auto px-0.5 pt-0 sm:px-2 md:px-6 pb-32">
+              <div className="max-w-6xl mx-auto px-2 md:px-6 pb-32">
                 {isAnalyzing || isSwitchingFile ? (
                   <div className="flex flex-col items-center justify-center py-20 space-y-6">
                     <div className="relative w-20 h-20">
@@ -1040,7 +1040,7 @@ const App = () => {
                 ) : (
                   // KEY-SWITCHING IMPLEMENTATION
                   // key={activeFileId} forces a full remount of this container when file changes
-                  <div key={activeFileId} className="space-y-4 min-h-[200px]">
+                  <div key={activeFileId} className="space-y-2 min-h-[200px]">
                     <ErrorBoundary>
                       {transcriptData.map((item, idx) => {
                         const isActive = idx === currentSentenceIdx;
