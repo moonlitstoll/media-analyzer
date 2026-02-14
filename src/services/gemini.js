@@ -16,12 +16,12 @@ const SYSTEM_PROMPT = `
    - 예시: "w": "Hợp đồng", "m": "[명사] 계약", "f": "Hợp (合 합 - 합하다) + đồng (同 동 - 한가지)가 합쳐져 '계약'을 의미."
 
 3. **문장 패턴화 (Sentence Patterns)**:
-   - 문장의 뼈대가 되는 패턴을 추출하고, 의미와 반드시 "응용:" 형태의 예시를 포함하세요.
-   - **출력 양식**: "t" 에는 패턴 공식을, "d" 에는 "(의미) \\n\\n응용: [예시]"를 작성하세요.
+   - 문장의 뼈대가 되는 패턴을 추출하고, 의미와 반드시 응용 예시를 포함하세요.
+   - **출력 양식**: "t" 에는 패턴 공식을, "d" 에는 "(의미) \\n\\n[응용 예시]"를 작성하세요. ("응용:" 문구는 포함하지 마세요)
 
 **[2. JSON 출력 규격 (Byte Saving)]**
 - "s": timestamp, "v": startSeconds, "e": endSeconds, "o": text, "t": translation
-- "p": patterns (t: 패턴공식, d: 의미 및 응용)
+- "p": patterns (t: 패턴공식, d: 의미 및 응용 예시)
 - "w": words (w: 덩어리, m: [품사] 뜻, f: 상세 설명)
 
 **[3. 분석 스타일 가이드 (Style Reference - 반드시 이 양식을 따를 것)]**
@@ -29,7 +29,7 @@ const SYSTEM_PROMPT = `
 **예시 1 (베트남어)**:
 - 원문: "Hợp đồng này được ký rồi, mà mình còn chưa nhận được tiền cọc nhỉ?"
 - 번역: "이 계약서는 이미 체결되었는데, 우리 아직 계약금을 못 받았지?"
-- 패턴: [A] được [동사] rồi, mà [B] còn chưa [동사] nhỉ? (A는 이미 ~되었는데, B는 아직 ~하지 않았지? \\n\\n응용: Lô hàng được giao rồi, mà khách còn chưa thanh toán nhỉ?)
+- 패턴: [A] được [동사] rồi, mà [B] còn chưa [동사] nhỉ? (A는 이미 ~되었는데, B는 아직 ~하지 않았지? \\n\\nLô hàng được giao rồi, mà khách còn chưa thanh toán nhỉ?)
 - 단어분석:
   ["Hợp đồng", "[명사] 계약", "Hợp (合 합 - 합하다) + đồng (同 동 - 한가지)가 합쳐져 '계약'을 의미."],
   ["này", "[지시사] 이", "명사 뒤에서 해당 대상을 지칭."],
@@ -38,7 +38,7 @@ const SYSTEM_PROMPT = `
 **예시 2 (베트남어)**:
 - 원문: "Tiếng Việt càng học càng thấy thú vị."
 - 번역: "베트남어는 공부하면 할수록 더 재미있게 느껴져요."
-- 패턴: [A] càng [B] càng [C] (A는 B할수록 더 C하다 \\n\\n응용: Trời càng tối càng lạnh nhỉ?)
+- 패턴: [A] càng [B] càng [C] (A는 B할수록 더 C하다 \\n\\nTrời càng tối càng lạnh nhỉ?)
 - 단어분석:
   ["Tiếng Việt", "[명사] 베트남어", "Tiếng (소리/말) + Việt (越 월 - 베트남)."],
   ["càng học", "[부사+동사] 배울수록", "càng (더욱) + học (學 학 - 배우다)."]
@@ -46,7 +46,7 @@ const SYSTEM_PROMPT = `
 **예시 3 (영어)**:
 - 원문: "Please double-check the container number, as the client is waiting for the update."
 - 번역: "클라이언트가 업데이트를 기다리고 있으니 컨테이너 번호를 다시 확인해 주세요."
-- 패턴: Please [동사], as [주어] is waiting for [목적어] (~가 기다리고 있으니, ~를 해주세요 \\n\\n응용: Please send the invoice, as the accounting team is waiting for payment.)
+- 패턴: Please [동사], as [주어] is waiting for [목적어] (~가 기다리고 있으니, ~를 해주세요 \\n\\nPlease send the invoice, as the accounting team is waiting for payment.)
 - 단어분석:
   ["double-check", "[동사] 재확인하다", "double (두 번) + check (확인)."],
   ["the container number", "[명사구] 컨테이너 번호", "정관사 the와 결합한 고유 식별 번호."]
