@@ -231,17 +231,29 @@ const App = () => {
 
 
 
-  // Helper: Parse MM:SS.ms to seconds
+  // Helper: Parse MM:SS.ms or total seconds to float
   const parseTime = (timeStr) => {
-    if (!timeStr) return 0;
-    const cleanStr = timeStr.replace(/[\[\]]/g, '');
+    if (timeStr === undefined || timeStr === null) return 0;
+    if (typeof timeStr === 'number') return timeStr;
+
+    // Remove brackets and whitespace
+    const cleanStr = timeStr.toString().replace(/[\[\]\s]/g, '');
+
+    // Split by colon
     const parts = cleanStr.split(':');
     if (parts.length === 2) {
-      return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+      // MM:SS.ms
+      const minutes = parseFloat(parts[0]) || 0;
+      const seconds = parseFloat(parts[1]) || 0;
+      return (minutes * 60) + seconds;
+    } else if (parts.length === 1) {
+      // Just seconds
+      return parseFloat(parts[0]) || 0;
     }
     return 0;
   };
 
+  // Helper: Sanitize & Sort Data
   // Helper: Sanitize & Sort Data
   const sanitizeData = (data) => {
     if (!Array.isArray(data)) {
@@ -254,8 +266,11 @@ const App = () => {
         // Map shortened keys back to original keys if present
         const timestamp = item.s || item.timestamp;
         const secondsValue = item.v !== undefined ? item.v : item.seconds;
-        const text = item.o || item.text || "(No text)";
+        let text = item.o || item.text || "(No text)";
         const translation = item.t || item.translation || "";
+
+        // FILTER: Remove non-verbal elements like (music), (applause), etc.
+        text = text.replace(/\([^)]*\)/g, '').replace(/\[[^\]]*\]/g, '').trim();
 
         // Handle patterns
         let patterns = item.p || item.patterns || [];
@@ -286,13 +301,13 @@ const App = () => {
         return {
           timestamp,
           seconds: isNaN(seconds) ? 0 : seconds,
-          text,
+          text: text || "(No text)",
           translation,
           words,
           patterns
         };
       })
-      .filter(item => item.text !== "(No text)") // Optional: remove empty text items if desired
+      .filter(item => item.text && item.text !== "(No text)")
       .sort((a, b) => a.seconds - b.seconds);
   };
 
@@ -491,33 +506,28 @@ const App = () => {
     return idx;
   }, []);
 
-  // Sync Loop
+  // Sync Loop (High-Frequency 100ms)
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !activeFile?.data) return;
 
-    // Auto loop the whole video only if no sentence is being looped
     v.loop = loopingSentenceIdxRef.current === null;
 
-    let rAF;
-    let lastTime = 0;
+    let syncInterval;
 
-    const tick = () => {
+    const runSync = () => {
       const now = v.currentTime;
-
-      // 1. Update Progress Bar (Throttle to ~30fps or every frame if smooth)
       setCurrentTime(now);
 
-      // 2. Strict Sync Check (Every Frame for precision, state update only on change)
+      // Stateless Lookup: Always find from the whole array
       const newIdx = findActiveIndex(now, activeFile.data);
 
-      if (newIdx !== -1 && newIdx !== activeIdxRef.current) {
-        // Index Changed!
+      if (newIdx !== activeIdxRef.current) {
         activeIdxRef.current = newIdx;
-        setActiveSentenceIdx(newIdx); // Triggers UI update
+        setActiveSentenceIdx(newIdx);
       }
 
-      // 3. Loop Logic (0.8s Buffer)
+      // Loop Logic
       const loopIdx = loopingSentenceIdxRef.current;
       if (loopIdx !== null) {
         const item = activeFile.data[loopIdx];
@@ -525,7 +535,7 @@ const App = () => {
           const start = Math.max(0, item.seconds - BUFFER_SECONDS);
           const end = (loopIdx < activeFile.data.length - 1)
             ? activeFile.data[loopIdx + 1].seconds + BUFFER_SECONDS
-            : v.duration + BUFFER_SECONDS; // Handle last item end
+            : v.duration + BUFFER_SECONDS;
 
           if (now >= end - 0.1 || (v.ended && loopIdx === activeFile.data.length - 1)) {
             v.currentTime = start;
@@ -533,54 +543,31 @@ const App = () => {
           }
         }
       }
-
-      if (!v.paused && !v.ended) {
-        rAF = requestAnimationFrame(tick);
-      }
     };
 
-    const onPlay = () => {
-      setIsPlaying(true);
-      tick();
+    const startSync = () => {
+      if (syncInterval) clearInterval(syncInterval);
+      syncInterval = setInterval(runSync, 100);
+      runSync();
     };
 
-    const onPause = () => {
-      setIsPlaying(false);
-      cancelAnimationFrame(rAF);
-      // Immediate sync on pause to ensure correct highlighting
-      const idx = findActiveIndex(v.currentTime, activeFile.data);
-      if (idx !== -1 && idx !== activeIdxRef.current) {
-        activeIdxRef.current = idx;
-        setActiveSentenceIdx(idx);
-      }
+    const stopSync = () => {
+      if (syncInterval) clearInterval(syncInterval);
     };
 
-    const onSeek = () => {
-      // High-Precision Snapshot Scan on Seek/Scrub (Unified Engine)
-      const now = v.currentTime;
-      const idx = findActiveIndex(now, activeFile.data);
-      if (idx !== -1 && idx !== activeIdxRef.current) {
-        activeIdxRef.current = idx;
-        setActiveSentenceIdx(idx);
-      }
-      setCurrentTime(now);
-    };
+    v.addEventListener('play', startSync);
+    v.addEventListener('pause', stopSync);
+    v.addEventListener('ended', stopSync);
+    v.addEventListener('timeupdate', runSync); // Robust backup
 
-    v.addEventListener('play', onPlay);
-    v.addEventListener('pause', onPause);
-    v.addEventListener('ended', onPause);
-    v.addEventListener('timeupdate', onSeek); // Handles seek & backup sync
-    v.addEventListener('seeking', onSeek);    // Handles scrub dragging
-
-    if (!v.paused) tick();
+    if (!v.paused) startSync();
 
     return () => {
-      cancelAnimationFrame(rAF);
-      v.removeEventListener('play', onPlay);
-      v.removeEventListener('pause', onPause);
-      v.removeEventListener('ended', onPause);
-      v.removeEventListener('timeupdate', onSeek);
-      v.removeEventListener('seeking', onSeek);
+      stopSync();
+      v.removeEventListener('play', startSync);
+      v.removeEventListener('pause', stopSync);
+      v.removeEventListener('ended', stopSync);
+      v.removeEventListener('timeupdate', runSync);
     };
   }, [activeFile, findActiveIndex]);
 
