@@ -78,11 +78,10 @@ export async function analyzeMedia(file, apiKey) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    // Fixed version identifiers as per Google AI Studio standard
+    // Fixed version identifiers: 2.0 Flash as primary, 2.5 Flash as fallback
     const MODELS_TO_TRY = [
-        "gemini-1.5-pro-002",
-        "gemini-1.5-flash-002",
-        "gemini-2.0-flash-exp"
+        "gemini-2.0-flash",
+        "gemini-2.5-flash"
     ];
 
     try {
