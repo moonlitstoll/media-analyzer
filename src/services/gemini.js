@@ -3,49 +3,32 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const SYSTEM_PROMPT = `
 당신은 베트남어 및 영어 등 외국어를 분석하는 **'MM:SS 포인트 기반 전수 발화 기록 전문 AI'** 입니다.
 
-**[0. 미디어 분석 엔진 단일화 원칙 (Mandatory Engine)]**
-- **이산적 포인트 매칭 (Discrete Point Matching)**: 각 문장이 시작되는 **'단일 시점'**에만 핀을 꽂으십시오.
-- **타임라인 형식 규격 (Strict MM:SS)**: 
+**[0. 미디어 분석 엔진 단일화 원칙 (Absolute Mandatory)]**
+- **이산적 포인트 매칭 (Discrete Point Matching)**: 각 문장이 시작되는 **'단일 시점'**에만 핀을 꽂으십시오. 0:02-0:03 처럼 범위를 잡으면 시스템이 붕괴됩니다.
+- **타임라인 형식 규격 (MM:SS Only)**: 
     - 모든 타임라인은 반드시 **[MM:SS]** 형식(예: 01:05, 02:10)으로만 출력하십시오.
-    - **범위형 금지**: "0:02 - 0:03"과 같이 하이픈이나 물결표를 사용한 구간 표기는 **절대 금지**입니다.
-    - **순수 초 단위 금지**: "61", "105.1"과 같이 콜론(:)이 없는 숫자 나열은 **절대 금지**입니다.
-- **60진법 시간 분할**: 60초가 넘어가면 반드시 분 단위로 환산하십시오. (예: 61초 -> 01:01, 105초 -> 01:45)
+    - **범위형(Range) 절대 금지**: 하이픈(-)이나 물결표(~)를 사용한 모든 구간 표기를 금지합니다.
+    - **순수 초(Seconds) 절대 금지**: "61", "105.1" 등 콜론(:)이 없는 숫자 나열을 금지합니다.
+- **60진법 강제 적용**: 60초가 넘어가면 무조건 분 단위로 환산하십시오. (예: 61 -> 01:01, 75 -> 01:15)
 
-**[1. 전수 발화 기록 원칙 (Absolute Zero Omission)]**
-- **모든 말소리 포착**: 메인 가사뿐만 아니라 추임새("아", "오"), 짧은 감탄사, (웃음), (숨소리) 등 발성 기관을 거친 모든 소리를 개별 타임라인과 함께 기록하십시오.
-- **반복 생략 금지**: 동일 문장이 반복되어도 절대 요약하지 말고 매번 새로운 타임라인과 함께 출력하십시오.
+**[1. 전수 발화 기록 원칙 (No Omission)]**
+- **모든 말소리 포착**: 가사, 추임새, 감탄사, (웃음), (숨소리) 등 모든 소리를 개별 타임라인과 함께 기록하십시오. 
+- **반복 생략 금지**: 동일 문장 반복 시에도 매번 새로운 단일 타임라인과 함께 출력하십시오.
 
 **[2. 출력 데이터 구조]**
-- 설명(번역, 단어 분석)은 반드시 **한국어(Korean)**로 작성하십시오.
+- 모든 설명은 **한국어(Korean)**로 작성하십시오.
 - JSON 응답 규격:
     - "s": "MM:SS" (예: "01:04")
-    - "o": 원문 텍스트
-    - "t": 한국어 번역
+    - "o": 원문 텍스트, "t": 한국어 번역
     - "w": words 분석 (w: 덩어리, m: [품사] 뜻, f: 상세 분석)
 
-**[3. 예시 (Discrete MM:SS Point Mode)]**:
+**[3. 예시 (Discrete Point Mode)]**:
 [
-  {
-    "s": "00:14",
-    "o": "Mặt quần ống loe",
-    "t": "나팔바지를 입고",
-    "w": [
-      { "w": "Mặt", "m": "[동사] 입다", "f": "옷이나 신발 등을 착용하다." },
-      { "w": "quần ống loe", "m": "[명사] 나팔바지", "f": "quần(바지) + ống(통) + loe(퍼지다)." }
-    ]
-  },
-  {
-    "s": "00:16",
-    "o": "Áo anh nó với size",
-    "t": "내 옷 사이즈는 말이야",
-    "w": [
-      { "w": "Áo", "m": "[명사] 옷", "f": "상의를 통칭함." },
-      { "w": "size", "m": "[명사] 사이즈", "f": "영단어 size의 베트남식 차용." }
-    ]
-  }
+  { "s": "00:14", "o": "Mặt quần ống loe", "t": "나팔바지를 입고", "w": [...] },
+  { "s": "00:16", "o": "Áo anh nó với size", "t": "내 옷 사이즈는 말이야", "w": [...] }
 ]
 
-부연 설명 없이 유효한 JSON Array만 출력하십시오. 모든 시간은 [MM:SS] 포인트 방식으로 기록하십시오.
+부연 설명 없이 유효한 JSON Array만 출력하십시오. 범위를 사용하지 말고 반드시 '시작 점'만 기록하십시오.
 `;
 
 
@@ -185,7 +168,41 @@ export async function analyzeMedia(file, apiKey) {
         const processedText = tryRepairJson(text);
 
         try {
-            return JSON.parse(processedText);
+            const rawData = JSON.parse(processedText);
+
+            // [무적의 단일화 엔진] 포인트 기반 정규화 강제 적용 (Invariant Normalization)
+            if (Array.isArray(rawData)) {
+                return rawData.map(item => {
+                    let s = String(item.s || "").trim();
+
+                    // 1. 범위형 강제 제거: (-) 나 (~) 가 있으면 무조건 앞부분만 취함
+                    if (s.includes('-')) s = s.split('-')[0].trim();
+                    if (s.includes('~')) s = s.split('~')[0].trim();
+
+                    // 2. 기호 청소: 대괄호나 불필요한 공백 제거
+                    s = s.replace(/[\[\]\s]/g, '');
+
+                    // 3. 60진법 기반 MM:SS 강제 환산 (포인트 매칭 고정)
+                    if (s.includes(':')) {
+                        // MM:SS 포맷인 경우: 첫 번째 콜론 앞뒤만 취함 (밀리초 제거 포함)
+                        const parts = s.split(':');
+                        const m = parts[0].padStart(2, '0');
+                        const secPart = parts[1].split('.')[0].padStart(2, '0');
+                        s = `${m}:${secPart}`;
+                    } else if (s !== "" && !isNaN(parseFloat(s))) {
+                        // "14" 나 "105.1" 같이 순수 초 단위가 들어온 경우 -> MM:SS로 강제 환산
+                        const total = parseFloat(s);
+                        const m = Math.floor(total / 60);
+                        const sec = Math.floor(total % 60);
+                        s = `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+                    } else if (s === "") {
+                        s = "00:00";
+                    }
+
+                    return { ...item, s };
+                });
+            }
+            return rawData;
         } catch (parseErr) {
             console.error("JSON Parse Error:", parseErr);
             // Fallback attempt: find the last valid object in the array
