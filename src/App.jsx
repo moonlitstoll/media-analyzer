@@ -1000,13 +1000,10 @@ const App = () => {
                     <FileAudio size={16} className={`shrink-0 ${isAnalyzing || isSwitchingFile ? 'text-slate-400 animate-pulse' : 'text-indigo-600'}`} />
                   )}
 
-                  {/* Text Binding with Analyzing State or Active Sentence */}
                   <span className={`text-base font-bold truncate group-hover:text-indigo-700 transition-colors ${isAnalyzing || isSwitchingFile ? 'text-slate-500 italic' : ''}`}>
                     {isAnalyzing || isSwitchingFile
                       ? `Analyzing... ${activeFile.file.name}`
-                      : (currentSentenceIdx !== -1 && transcriptData[currentSentenceIdx])
-                        ? transcriptData[currentSentenceIdx].text
-                        : activeFile.file.name
+                      : activeFile.file.name
                     }
                   </span>
                 </div>
