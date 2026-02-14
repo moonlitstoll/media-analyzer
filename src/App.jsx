@@ -233,8 +233,10 @@ const App = () => {
 
   // Helper: Parse MM:SS.ms or total seconds to float
   const parseTime = (timeStr) => {
-    if (!timeStr) return 0;
+    if (!timeStr) return 0.0;
     const cleanStr = timeStr.toString().replace(/[\[\]\s]/g, '');
+
+    // STICKY RULE: Strict (Minutes * 60) + Seconds conversion
     const parts = cleanStr.split(':');
     if (parts.length === 2) {
       const minutes = parseFloat(parts[0]) || 0;
@@ -283,12 +285,14 @@ const App = () => {
           }));
         }
 
+        // STICKY RULE: Numeric Precision at Load Time
         let seconds = 0;
         if (typeof secondsValue === 'number') {
           seconds = secondsValue;
         } else if (typeof timestamp === 'string') {
           seconds = parseTime(timestamp);
         }
+        seconds = isNaN(seconds) ? 0 : seconds;
 
         let endSeconds = seconds + 3.0; // Default gap-fill: 3s
         if (typeof endValue === 'number') {
@@ -489,15 +493,22 @@ const App = () => {
   // Quick Sync Handler Removed
 
 
-  // Simple Index Search
+  // Sticky Index Search (The Sticky Rule)
   const findActiveIndex = useCallback((time, data) => {
     if (!data || data.length === 0) return -1;
 
-    return data.findIndex((item, i) => {
-      const start = item.seconds;
-      const end = (i < data.length - 1) ? data[i + 1].seconds : (videoRef.current?.duration || Infinity);
-      return time >= start && time < end;
-    });
+    // Logic: Find the LAST item that has already started (startTime <= currentTime)
+    // This pins the highlight during gaps until the next lyric arrives.
+    let lastStartedIdx = -1;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].seconds <= time) {
+        lastStartedIdx = i;
+      } else {
+        // Since data is sorted, we can stop early
+        break;
+      }
+    }
+    return lastStartedIdx;
   }, []);
 
   // Stateless Sync Engine (High-Res Event Listening)
@@ -511,6 +522,7 @@ const App = () => {
       const now = v.currentTime;
       setCurrentTime(now);
 
+      // STICKY LOOKUP: Stateless search for the latest started item
       const newIdx = findActiveIndex(now, activeFile.data);
 
       if (newIdx !== activeIdxRef.current) {
