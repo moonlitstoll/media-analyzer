@@ -983,13 +983,6 @@ const App = () => {
         </div>
       )}
 
-      {/* Debug Monitor */}
-      {activeFile && (
-        <div className="fixed top-0 left-0 z-[9999] pointer-events-none p-1 bg-black/80 text-[10px] font-mono font-bold text-red-500 rounded-br-lg shadow-lg">
-          [DEBUG] Time: {currentTime?.toFixed(2)}s | Active Idx: {currentSentenceIdx} | Target Time: {currentSentenceIdx !== -1 && transcriptData?.[currentSentenceIdx] ? (typeof transcriptData[currentSentenceIdx].seconds === 'number' ? transcriptData[currentSentenceIdx].seconds : parseFloat(transcriptData[currentSentenceIdx].seconds || 0)).toFixed(2) : 'N/A'}s | Found via Reverse Scan
-        </div>
-      )}
-
       {/* Header - Now Sticky & Compact */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 flex-none h-14 sm:h-16 flex items-center justify-between px-3 sm:px-6">
         {/* Left: Home Button (Back to Upload) */}
