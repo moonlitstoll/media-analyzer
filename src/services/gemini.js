@@ -24,46 +24,31 @@ const SYSTEM_PROMPT = `
    - 단어를 기계적으로 쪼개기보다, 의미가 연결되는 **덩어리(Chunk)**로 묶어 문맥과 뉘앙스를 직관적으로 이해하게 하세요.
 4. **베트남어 특화 (Hanja/Chinese-Vietnamese Roots)**:
    - 1음절이 모여 만든 복합어는 따로 떼지 않고 한 항목에서 설명하되, 각 음절의 **한자 뜻과 음**을 명확히 명시하세요.
-   - 예: "tiền cọc" -> "tiền (錢 전 - 돈) + cọc (보증)"
 5. **문장 패턴화 (Sentence Patterns)**:
-   - 문장의 뼈대가 되는 **공식/패턴**을 추출하세요. (예: "Mà [A] còn [B] nhỉ?")
-   - 해당 패턴의 설명과 함께, 다른 단어를 사용한 **응용 예시(문장 + 번역)**를 반드시 포함하세요.
+   - 문장의 뼈대가 되는 **공식/패턴**을 추출하세요.
+   - 반드시 다른 단어를 사용한 **응용 예시(문장 + 번역)**를 포함하세요.
 6. **역할 명시**:
    - 품사, 문법적 기능, 방언 여부 등을 상세히 기록하세요.
 
-**[3. 출력 포맷 - JSON Array]**
+**[3. JSON 문법 및 이스케이프 강제 규격 (Crucial JSON Rules)]**
 
-응답은 반드시 아래 포맷의 JSON Array여야 합니다:
+1. **JSON 전용 응답**: 응답은 반드시 유효한 JSON Array여야 하며, 어떤 설명이나 추가 텍스트도 포함하지 마세요.
+2. **이스케이프(Escape) 필수**: 모든 문자열 내의 **큰따옴표("), 백슬래시(\), 줄바꿈(\n)**은 반드시 표준 JSON 방식(예: \\", \\n)으로 이스케이프 처리하세요.
+3. **완전성(Completeness)**: 데이터량이 많더라도 절대 중간에 끊지 말고 반드시 닫는 대괄호(])로 마무리하세요.
 
-\`\`\`json
+응답 예시:
+```json
 [
-  {
-    "timestamp": "[MM:SS.s]",
-    "seconds": 0.0,
-    "text": "실제 발화된 원문",
-    "translation": "한국어 번역",
-    "patterns": [
-       { 
-         "term": "패턴 공식 (예: [A] được [동사] rồi)", 
-         "definition": "패턴 설명 + 응용 예시 (예: 응용 1: 문장 - 번역)" 
-       }
-    ],
-    "words": [
-       { 
-         "word": "의미 단위 (단어/구)", 
-         "meaning": "의미 + 한자 풀이(베트남어일 경우) + 문맥적 뉘앙스", 
-         "func": "품사, 문법적 기능, 방언 등 상세 역할" 
-       }
-    ]
-  }
+    {
+        "timestamp": "[00:10.5]",
+        "seconds": 10.5,
+        "text": "Xin chào!",
+        "translation": "안녕하세요!",
+        "patterns": [],
+        "words": []
+    }
 ]
-\`\`\`
-
-**[최종 검토 (Completeness Check)]**
-1. 문장 내 모든 요소가 순서대로 분석되었는가?
-2. 베트남어 복합어에 한자 풀이가 포함되었는가?
-3. 문장 패턴 공식과 응용 예시가 포함되었는가?
-4. 무손실 전수 기록 원칙이 지켜졌는가?
+    ```
 `;
 
 export async function analyzeMedia(file, apiKey) {
@@ -108,13 +93,18 @@ export async function analyzeMedia(file, apiKey) {
             const modelName = rawName.startsWith('models/') ? rawName.replace('models/', '') : rawName;
 
             console.log(`Diagnostic: Expected URL: https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey.substring(0, 4)}...`);
-            console.log(`Attempting analysis with fixed-version model: ${modelName} (v1beta)`);
+            console.log(`Attempting analysis with model: ${modelName} (JSON Mode)`);
 
-            const model = genAI.getGenerativeModel({ model: modelName }, { apiVersion: "v1beta" });
+            const model = genAI.getGenerativeModel({
+                model: modelName,
+                generationConfig: {
+                    responseMimeType: "application/json",
+                }
+            }, { apiVersion: "v1beta" });
+
 
             let retryCount = 0;
             const maxRetries = 2;
-            let delay = 2000;
             let modelSuccess = false;
 
             while (retryCount <= maxRetries) {
@@ -138,8 +128,7 @@ export async function analyzeMedia(file, apiKey) {
                         retryCount++;
                         if (retryCount <= maxRetries) {
                             console.warn(`Model ${modelName} overloaded. Retrying (${retryCount}/${maxRetries})...`);
-                            await new Promise(resolve => setTimeout(resolve, delay));
-                            delay *= 2;
+                            await new Promise(resolve => setTimeout(resolve, 2000 * Math.pow(2, retryCount - 1)));
                             continue;
                         }
                     }
@@ -166,22 +155,49 @@ export async function analyzeMedia(file, apiKey) {
         }
 
         const response = await result.response;
-        const text = response.text();
-        console.log("Gemini Raw Response (First 100 chars):", text.substring(0, 100));
+        let text = response.text();
+        console.log("Gemini Raw (Start):", text.substring(0, 100));
 
-        // Clean up markdown
-        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        // 1. Markdown/Text Cleaning
+        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-        // Find array start/end if there's extra text
-        const startIdx = jsonStr.indexOf('[');
-        const endIdx = jsonStr.lastIndexOf(']');
+        // 2. Truncation Repair Logic
+        const tryRepairJson = (str) => {
+            str = str.trim();
+            if (str.endsWith(']')) return str;
 
-        if (startIdx === -1 || endIdx === -1) {
-            throw new Error("AI response did not contain valid JSON array");
+            console.warn("JSON might be truncated. Attempting repair...");
+
+            let repaired = str;
+            const openBraces = (repaired.match(/{/g) || []).length;
+            const closeBraces = (repaired.match(/}/g) || []).length;
+            const openBrackets = (repaired.match(/\[/g) || []).length;
+            const closeBrackets = (repaired.match(/]/g) || []).length;
+
+            const quoteCount = (repaired.match(/"/g) || []).length;
+            if (quoteCount % 2 !== 0) repaired += '"';
+
+            if (openBraces > closeBraces) repaired += ' }';
+            if (openBrackets > closeBrackets) repaired += ' ]';
+
+            return repaired;
+        };
+
+        const processedText = tryRepairJson(text);
+
+        try {
+            return JSON.parse(processedText);
+        } catch (parseErr) {
+            console.error("JSON Parse Error:", parseErr);
+            // Fallback attempt: find the last valid object in the array
+            const lastValidIndex = processedText.lastIndexOf('},');
+            if (lastValidIndex !== -1) {
+                try {
+                    return JSON.parse(processedText.substring(0, lastValidIndex + 1) + ']');
+                } catch (e) { }
+            }
+            throw new Error(`AI Analysis Failed (JSON Syntax Error): ${parseErr.message}`);
         }
-
-        const cleanJson = jsonStr.substring(startIdx, endIdx + 1);
-        return JSON.parse(cleanJson);
 
     } catch (e) {
         console.error("Gemini Analysis Error:", e);
