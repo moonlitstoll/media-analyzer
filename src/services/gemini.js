@@ -78,12 +78,12 @@ export async function analyzeMedia(file, apiKey) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    // Model fallback list
+    // Model fallback list (Gemini 2.5 usually refers to 1.5 Pro)
     const MODELS_TO_TRY = [
-        "gemini-1.5-flash",
-        "models/gemini-1.5-flash",
         "gemini-1.5-pro",
-        "gemini-2.0-flash-exp"
+        "gemini-2.0-flash-exp",
+        "gemini-1.5-flash",
+        "models/gemini-1.5-flash"
     ];
 
     try {
