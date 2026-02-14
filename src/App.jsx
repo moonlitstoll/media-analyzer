@@ -53,23 +53,23 @@ const TranscriptItem = memo(({
 }) => {
   const itemRef = useRef(null);
 
-  // 1. Force Auto-Scroll on Active Change (Always Top)
+  // 1. Force Auto-Scroll on Active Change (Always Top) - Paused during Looping
   useEffect(() => {
-    if (isActive && itemRef.current) {
+    if (isActive && itemRef.current && !isGlobalLooping && !isLooping) {
       itemRef.current.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
         inline: 'nearest'
       });
     }
-  }, [isActive]);
+  }, [isActive, isGlobalLooping, isLooping]);
 
-  // 2. Instant Scroll Anchoring on Layout Change (Toggle Analysis)
+  // 2. Instant Scroll Anchoring on Layout Change (Toggle Analysis) - Paused during Looping
   useLayoutEffect(() => {
-    if (isActive && itemRef.current) {
+    if (isActive && itemRef.current && !isGlobalLooping && !isLooping) {
       itemRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
     }
-  }, [showAnalysis]);
+  }, [showAnalysis, isGlobalLooping, isLooping]);
 
   return (
     <div
