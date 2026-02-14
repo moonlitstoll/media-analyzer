@@ -266,6 +266,7 @@ const App = () => {
         // Map shortened keys back to original keys if present
         const timestamp = item.s || item.timestamp;
         const secondsValue = item.v !== undefined ? item.v : item.seconds;
+        const endValue = item.e !== undefined ? item.e : item.endSeconds;
         let text = item.o || item.text || "(No text)";
         const translation = item.t || item.translation || "";
 
@@ -298,13 +299,20 @@ const App = () => {
           seconds = parseTime(timestamp);
         }
 
+        let endSeconds = seconds + 3.0; // Default gap-fill: 3s
+        if (typeof endValue === 'number') {
+          endSeconds = endValue;
+        }
+
         return {
           timestamp,
-          seconds: isNaN(seconds) ? 0 : seconds,
-          text: text || "(No text)",
+          seconds,
+          endSeconds,
+          text,
           translation,
+          patterns,
           words,
-          patterns
+          isAnalyzed: !!(item.p || item.patterns || item.w || item.words)
         };
       })
       .filter(item => item.text && item.text !== "(No text)")
@@ -490,21 +498,16 @@ const App = () => {
   // Quick Sync Handler Removed
 
 
-  // --- SYNC ENGINE (High-Precision 100ms) ---
-
-  // Basic Index Calculation
+  // Stateless Index Calculation (Every tick search)
   const findActiveIndex = useCallback((time, data) => {
     if (!data || data.length === 0) return -1;
-    // Standard approach: find the item where time is within [start, nextStart)
-    const idx = data.findIndex((item, i) => {
-      const start = item.seconds;
-      const end = (i < data.length - 1) ? data[i + 1].seconds : (videoRef.current?.duration || Infinity);
-      return time >= start && time < end;
-    });
-    return idx;
+
+    // Explicit Bound Check: time must be between [seconds, endSeconds)
+    // If not found, returns -1 which clears the highlight
+    return data.findIndex(item => time >= item.seconds && time < item.endSeconds);
   }, []);
 
-  // Standard Sync Engine (Event-Listener based)
+  // Stateless Sync Engine (High-Res Event Listening)
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !activeFile?.data) return;
@@ -515,6 +518,7 @@ const App = () => {
       const now = v.currentTime;
       setCurrentTime(now);
 
+      // NO REFS: Fresh lookup on every timeupdate/tick
       const newIdx = findActiveIndex(now, activeFile.data);
 
       if (newIdx !== activeIdxRef.current) {
@@ -522,17 +526,15 @@ const App = () => {
         setActiveSentenceIdx(newIdx);
       }
 
-      // Loop Logic
+      // Loop Logic (Buffered)
       const loopIdx = loopingSentenceIdxRef.current;
       if (loopIdx !== null) {
         const item = activeFile.data[loopIdx];
         if (item) {
           const start = Math.max(0, item.seconds - BUFFER_SECONDS);
-          const end = (loopIdx < activeFile.data.length - 1)
-            ? activeFile.data[loopIdx + 1].seconds + BUFFER_SECONDS
-            : v.duration + BUFFER_SECONDS;
+          const end = item.endSeconds + BUFFER_SECONDS;
 
-          if (now >= end - 0.1 || (v.ended && loopIdx === activeFile.data.length - 1)) {
+          if (now >= end - 0.1 || v.ended) {
             v.currentTime = start;
             v.play().catch(() => { });
           }
@@ -541,15 +543,9 @@ const App = () => {
     };
 
     v.addEventListener('timeupdate', runSync);
-    v.addEventListener('play', runSync);
-    v.addEventListener('pause', runSync);
-    v.addEventListener('ended', runSync);
 
     return () => {
       v.removeEventListener('timeupdate', runSync);
-      v.removeEventListener('play', runSync);
-      v.removeEventListener('pause', runSync);
-      v.removeEventListener('ended', runSync);
     };
   }, [activeFile, findActiveIndex]);
 

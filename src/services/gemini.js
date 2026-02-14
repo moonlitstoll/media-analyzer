@@ -9,7 +9,8 @@ const SYSTEM_PROMPT = `
 1. **JSON 키 이름 축소 (Byte Saving)**:
    - 데이터 전송량을 줄이기 위해 반드시 아래의 단축 키를 사용하세요:
      - "s": timestamp (예: "[00:10.5]")
-     - "v": seconds (Float 값, 예: 10.5)
+     - "v": seconds (시작 시간, Float 값, 예: 10.5)
+     - "e": endSeconds (종료 시간, Float 값, 예: 12.3)
      - "o": text (원본 문장)
      - "t": translation (번역)
      - "p": patterns (문장 패턴 배열)
@@ -33,7 +34,7 @@ const SYSTEM_PROMPT = `
 응답은 반드시 유효한 JSON Array여야 하며, 어떤 설명이나 추가 텍스트도 포함하지 마세요.
 
 응답 예시(실제는 공백 없이 출력):
-[{"s":"[00:10.5]","v":10.5,"o":"Xin chào!","t":"안녕하세요!","p":[],"w":[]}]
+[{"s":"[00:10.5]","v":10.5,"e":12.3,"o":"Xin chào!","t":"안녕하세요!","p":[],"w":[]}]
 `;
 
 export async function analyzeMedia(file, apiKey) {
