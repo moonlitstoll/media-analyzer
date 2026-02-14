@@ -75,7 +75,7 @@ const TranscriptItem = memo(({
     <div
       ref={itemRef}
       className={`
-        group relative transition-all duration-300 ease-out mb-4 scroll-mt-24 rounded-xl border border-l-[4px] p-4 sm:p-5
+        group relative transition-all duration-300 ease-out mb-4 rounded-xl border border-l-[4px] p-4 sm:p-5
         ${isActive
           ? 'bg-transparent border-l-purple-700 border-t-slate-100 border-r-slate-100 border-b-slate-100 shadow-md z-10'
           : 'bg-white border-slate-100 opacity-90'}
@@ -115,16 +115,7 @@ const TranscriptItem = memo(({
         {/* Translation */}
         {/* Translation moved to Analysis Section */}
 
-        {/* Toggle Global Explanation Button */}
-        <div className="flex justify-end">
-          <button
-            onClick={(e) => { e.stopPropagation(); toggleGlobalAnalysis(); }}
-            className="flex items-center gap-1 text-xs font-bold text-indigo-500 hover:text-indigo-700 uppercase tracking-wider px-2 py-1 hover:bg-indigo-50 rounded-lg transition-colors"
-          >
-            {showAnalysis ? 'Hide' : 'Show'}
-            {showAnalysis ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-        </div>
+        {/* Toggle Global Explanation Button Removed */}
 
         {/* Detailed Analysis Section */}
         <div className={`overflow-hidden transition-all duration-500 ease-in-out ${showAnalysis ? 'max-h-[2000px] opacity-100 mt-2 pt-2 border-t border-slate-100' : 'max-h-0 opacity-0 mt-0 pt-0'}`}>
@@ -150,7 +141,7 @@ const TranscriptItem = memo(({
                   {item.patterns.map((pat, pi) => (
                     <div key={pi} className="bg-amber-50/50 p-2.5 rounded-xl border border-amber-100/50">
                       <span className="font-bold text-slate-800 text-lg block mb-0.5">{pat.term}</span>
-                      <span className="text-slate-600 text-base leading-relaxed block">{pat.definition}</span>
+                      <span className="text-slate-600 text-base leading-relaxed block whitespace-pre-line">{pat.definition}</span>
                     </div>
                   ))}
                 </div>
@@ -169,7 +160,7 @@ const TranscriptItem = memo(({
                       <span className="font-bold text-emerald-700 text-base min-w-[30%] break-words">{w.word}</span>
                       <div className="flex-1">
                         <span className="block text-slate-700 text-sm font-medium">{w.meaning}</span>
-                        {w.func && <span className="block text-slate-400 text-xs mt-0.5">{w.func}</span>}
+                        {w.func && <span className="block text-slate-600 text-sm mt-1 whitespace-pre-line leading-relaxed">{w.func}</span>}
                       </div>
                     </div>
                   ))}
@@ -1042,7 +1033,7 @@ const App = () => {
           <div className="flex flex-col h-full">
             <div className="flex-1 w-full overflow-y-auto bg-[#F8FAFC]" onClick={() => { setShowSpeedMenu(false); setShowFileList(false); }}>
 
-              <div className="max-w-6xl mx-auto px-0.5 py-4 sm:px-2 md:p-6 pb-32">
+              <div className="max-w-6xl mx-auto px-0.5 pt-0 sm:px-2 md:px-6 pb-32">
                 {isAnalyzing || isSwitchingFile ? (
                   <div className="flex flex-col items-center justify-center py-20 space-y-6">
                     <div className="relative w-20 h-20">
