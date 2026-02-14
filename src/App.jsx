@@ -251,20 +251,45 @@ const App = () => {
     return data
       .filter(item => item && typeof item === 'object') // Filter null/non-objects
       .map(item => {
+        // Map shortened keys back to original keys if present
+        const timestamp = item.s || item.timestamp;
+        const secondsValue = item.v !== undefined ? item.v : item.seconds;
+        const text = item.o || item.text || "(No text)";
+        const translation = item.t || item.translation || "";
+
+        // Handle patterns
+        let patterns = item.p || item.patterns || [];
+        if (Array.isArray(patterns)) {
+          patterns = patterns.map(p => ({
+            term: p.t || p.term || "",
+            definition: p.d || p.definition || ""
+          }));
+        }
+
+        // Handle words
+        let words = item.w || item.words || [];
+        if (Array.isArray(words)) {
+          words = words.map(w => ({
+            word: w.w || w.word || "",
+            meaning: w.m || w.meaning || "",
+            func: w.f || w.func || ""
+          }));
+        }
+
         let seconds = 0;
-        if (typeof item.seconds === 'number') {
-          seconds = item.seconds;
-        } else if (typeof item.timestamp === 'string') {
-          seconds = parseTime(item.timestamp);
+        if (typeof secondsValue === 'number') {
+          seconds = secondsValue;
+        } else if (typeof timestamp === 'string') {
+          seconds = parseTime(timestamp);
         }
 
         return {
-          ...item,
+          timestamp,
           seconds: isNaN(seconds) ? 0 : seconds,
-          text: item.text || "(No text)",
-          translation: item.translation || "",
-          words: Array.isArray(item.words) ? item.words : [],
-          patterns: Array.isArray(item.patterns) ? item.patterns : []
+          text,
+          translation,
+          words,
+          patterns
         };
       })
       .filter(item => item.text !== "(No text)") // Optional: remove empty text items if desired

@@ -4,51 +4,34 @@ const SYSTEM_PROMPT = `
 당신은 베트남어 및 외국어 학습을 위한 최고의 AI 튜터입니다.
 사용자가 제공하는 오디오/비디오 파일을 분석하여 다음의 **엄격한 규칙**에 따라 JSON 포맷으로 응답해야 합니다.
 
-**[1. 분석 원칙 - 무손실 전수 추출 및 초정밀 싱크 (Zero-Omission)]**
+**[1. 분석 원칙 - 출력 용량 극대화 및 고밀도 압축]**
 
-1. **무손실 전수 추출 (Zero-Omission Policy)**:
-   - **음성 우선 분석**: 실제 오디오 소스를 0.5초 단위로 정밀 분석하여 모든 발화를 포착하세요.
-   - **반복 문구 완전 보존**: 동일한 문장/단어가 반복되더라도 절대 생략하지 말고 들리는 횟수만큼 각각 기록하세요.
-   - **순수 발화 집중**: 사람의 입에서 나온 모든 말, 가사, 추임새를 포함하되 비언어적 소리는 제외합니다.
+1. **JSON 키 이름 축소 (Byte Saving)**:
+   - 데이터 전송량을 줄이기 위해 반드시 아래의 단축 키를 사용하세요:
+     - "s": timestamp (예: "[00:10.5]")
+     - "v": seconds (Float 값, 예: 10.5)
+     - "o": text (원본 문장)
+     - "t": translation (번역)
+     - "p": patterns (문장 패턴 배열)
+     - "w": words (단어 분석 배열)
+   - 내부 객체 키 단축:
+     - patterns 내: "t" (term), "d" (definition)
+     - words 내: "w" (word), "m" (meaning), "f" (func)
 
-2. **전구간 절대 시간(Absolute Seconds) 엔진**:
-   - 모든 타임라인은 0초부터 종료 시점까지 누적 초(Float)로 계산합니다. (예: [01:05.2] -> 65.2)
+2. **공백 및 서식 제거 (Minify)**:
+   - 응답 시 줄바꿈이나 불필요한 공백을 모두 제거한 한 줄의 긴 문자열(Minified JSON)로 출력하세요.
 
-**[2. 교육적 상세 분석 지침 (Educational Analysis)]**
+3. **분석 내용 압축 (Content Compression)**:
+   - 설명은 장황한 서술형 대신 "핵심 의미: 용법" 형태로 극도로 간결하게 작성하세요.
+   - 중복되는 단어 설명은 (참조: 이전 설명) 형태로 축약하여 토큰을 보존하세요.
 
-1. **순차 및 전수 분석 (Sequential & Exhaustive)**:
-   - 문장 내 단어가 등장하는 **순서대로** 누락 없이 모든 단어/구문을 분석하세요.
-2. **중복 설명 허용 (Duplication Allowed)**:
-   - 이전 문장에서 나왔던 단어라도 현재 문장에서 쓰였다면 다시 상세히 설명합니다.
-3. **의미 단위 구조화 (Semantic Chunking)**:
-   - 단어를 기계적으로 쪼개기보다, 의미가 연결되는 **덩어리(Chunk)**로 묶어 문맥과 뉘앙스를 직관적으로 이해하게 하세요.
-4. **베트남어 특화 (Hanja/Chinese-Vietnamese Roots)**:
-   - 1음절이 모여 만든 복합어는 따로 떼지 않고 한 항목에서 설명하되, 각 음절의 **한자 뜻과 음**을 명확히 명시하세요.
-5. **문장 패턴화 (Sentence Patterns)**:
-   - 문장의 뼈대가 되는 **공식/패턴**을 추출하세요.
-   - 반드시 다른 단어를 사용한 **응용 예시(문장 + 번역)**를 포함하세요.
-6. **역할 명시**:
-   - 품사, 문법적 기능, 방언 여부 등을 상세히 기록하세요.
+4. **무손실 추출**: 모든 발화를 누락 없이 포착하되, 위의 압축 규칙을 철저히 준수하세요.
 
-**[3. JSON 문법 및 이스케이프 강제 규격 (Crucial JSON Rules)]**
+**[2. JSON 규격]**
+응답은 반드시 유효한 JSON Array여야 하며, 어떤 설명이나 추가 텍스트도 포함하지 마세요.
 
-1. **JSON 전용 응답**: 응답은 반드시 유효한 JSON Array여야 하며, 어떤 설명이나 추가 텍스트도 포함하지 마세요.
-2. **이스케이프(Escape) 필수**: 모든 문자열 내의 **큰따옴표("), 백슬래시(\), 줄바꿈(\n)**은 반드시 표준 JSON 방식(예: \\", \\n)으로 이스케이프 처리하세요.
-3. **완전성(Completeness)**: 데이터량이 많더라도 절대 중간에 끊지 말고 반드시 닫는 대괄호(])로 마무리하세요.
-
-응답 예시:
-```json
-[
-    {
-        "timestamp": "[00:10.5]",
-        "seconds": 10.5,
-        "text": "Xin chào!",
-        "translation": "안녕하세요!",
-        "patterns": [],
-        "words": []
-    }
-]
-    ```
+응답 예시(실제는 공백 없이 출력):
+[{"s":"[00:10.5]","v":10.5,"o":"Xin chào!","t":"안녕하세요!","p":[],"w":[]}]
 `;
 
 export async function analyzeMedia(file, apiKey) {
@@ -63,10 +46,10 @@ export async function analyzeMedia(file, apiKey) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    // Fixed version identifiers: 2.0 Flash as primary, 2.5 Flash as fallback
+    // Prioritize 2.5 Flash for maximum token capacity
     const MODELS_TO_TRY = [
-        "gemini-2.0-flash",
-        "gemini-2.5-flash"
+        "gemini-2.5-flash",
+        "gemini-2.0-flash"
     ];
 
     try {
