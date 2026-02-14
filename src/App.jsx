@@ -231,10 +231,11 @@ const App = () => {
 
 
 
-  // Robust Helper: Parse HH:MM:SS.ms to total MILLISECONDS (Integer)
+  // Robust Helper: Parse [HH:MM:SS.ms] to Total Seconds (Float)
+  // Formula: (M * 60) + S + (ms / 1000)
   const parseTime = (timeStr) => {
     if (!timeStr) return 0;
-    if (typeof timeStr === 'number') return Math.floor(timeStr * 1000);
+    if (typeof timeStr === 'number') return timeStr;
 
     // 1. Clean string: remove [], spaces, and normalize comma to dot
     const cleanStr = timeStr.toString()
@@ -246,24 +247,23 @@ const App = () => {
     const parts = cleanStr.split(':');
 
     try {
-      let totalMs = 0;
+      let totalSeconds = 0;
       if (parts.length === 3) {
         // HH:MM:SS.ms
-        const h = parseInt(parts[0], 10) || 0;
-        const m = parseInt(parts[1], 10) || 0;
+        const h = parseFloat(parts[0]) || 0;
+        const m = parseFloat(parts[1]) || 0;
         const s = parseFloat(parts[2]) || 0;
-        totalMs = (h * 3600000) + (m * 60000) + Math.floor(s * 1000);
+        totalSeconds = (h * 3600) + (m * 60) + s;
       } else if (parts.length === 2) {
         // MM:SS.ms
-        const m = parseInt(parts[0], 10) || 0;
+        const m = parseFloat(parts[0]) || 0;
         const s = parseFloat(parts[1]) || 0;
-        totalMs = (m * 60000) + Math.floor(s * 1000);
+        totalSeconds = (m * 60) + s;
       } else if (parts.length === 1) {
-        // SS.ms or total seconds
-        const s = parseFloat(parts[0]) || 0;
-        totalMs = Math.floor(s * 1000);
+        // SS.ms or Raw Seconds
+        totalSeconds = parseFloat(parts[0]) || 0;
       }
-      return totalMs;
+      return totalSeconds;
     } catch (e) {
       console.error("Critical: Error parsing time string:", timeStr, e);
       return 0;
@@ -308,17 +308,17 @@ const App = () => {
           }));
         }
 
-        // MASTER MILLISECOND ENGINE (Integer Precision)
-        // PRIORITIZE TIMESTAMP STRING to match user view
-        let startMs = 0;
+        // MASTER SECOND ENGINE (Float Precision)
+        // PRIORITIZE TIMESTAMP STRING to match user view exactly
+        let startSeconds = 0;
         if (typeof timestamp === 'string' && timestamp.length > 0) {
-          startMs = parseTime(timestamp);
+          startSeconds = parseTime(timestamp);
         } else if (typeof secondsValue === 'number') {
-          startMs = Math.floor(secondsValue * 1000);
+          startSeconds = secondsValue;
         }
-        startMs = isNaN(startMs) ? 0 : startMs;
+        startSeconds = isNaN(startSeconds) ? 0 : startSeconds;
 
-        const seconds = startMs / 1000;
+        const seconds = startSeconds;
         let endSeconds = seconds + 3.0; // Default gap-fill: 3s
         if (typeof endValue === 'number') {
           endSeconds = endValue;
@@ -332,7 +332,7 @@ const App = () => {
         return {
           timestamp,
           seconds,
-          startMs,
+          startSeconds, // Explicit float for sync
           endSeconds,
           text,
           translation,
@@ -341,7 +341,7 @@ const App = () => {
           isAnalyzed: !!(item.p || item.patterns || item.w || item.words)
         };
       })
-      .sort((a, b) => a.startMs - b.startMs);
+      .sort((a, b) => a.startSeconds - b.startSeconds);
   };
 
   // Sync ref
@@ -523,22 +523,18 @@ const App = () => {
   // Quick Sync Handler Removed
 
 
-  // MASTER FILTER-SORT-SELECT SYNC ENGINE (ABSOLUTE COORDINATES)
-  const findActiveIndex = useCallback((timeInMs, data) => {
+  // ABSOLUTE TRACKING ENGINE (Float Comparison)
+  const findActiveIndex = useCallback((currentSeconds, data) => {
     if (!data || data.length === 0) return 0;
 
-    // 1. FILTER: Segments that have already started (Absolute check)
-    const candidates = data
-      .map((item, index) => ({ startMs: item.startMs, index }))
-      .filter(item => item.startMs <= timeInMs);
-
-    if (candidates.length === 0) return 0;
-
-    // 2. SORT: Descending by start time to find the LATEST started segment
-    candidates.sort((a, b) => b.startMs - a.startMs);
-
-    // 3. SELECT: Top 1
-    return candidates[0].index;
+    // Linear Scan: Find the last item that started BEFORE current time
+    let activeIdx = 0;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].startSeconds <= currentSeconds + 0.001) { // 1ms tolerance
+        activeIdx = i;
+      }
+    }
+    return activeIdx;
   }, []);
 
   // High-Resolution Sync Engine (Absolute Tracking)
@@ -550,14 +546,14 @@ const App = () => {
 
     const runSync = () => {
       if (!v) return;
-      const nowMs = Math.floor(v.currentTime * 1000);
-      setCurrentTime(v.currentTime);
+      const now = v.currentTime;
+      setCurrentTime(now);
 
-      // NO REFS STALE CLOSURE FIX: Use latest data implicitly
+      // GLOBAL SEARCH: Every tick, identify index from absolute timeline
       const data = activeFile.data;
       if (!data || data.length === 0) return;
 
-      const newIdx = findActiveIndex(nowMs, data);
+      const newIdx = findActiveIndex(now, data);
 
       if (newIdx !== activeIdxRef.current) {
         activeIdxRef.current = newIdx;
