@@ -1269,36 +1269,33 @@ const App = () => {
         )
       }
 
-      {/* Unified File & Analysis Management Modal */}
+      {/* Unified File History Modal */}
       {
         showCacheHistory && (
           <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl h-[95vh] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
-              <div className="p-4 border-b border-slate-100 flex items-center justify-end shrink-0 bg-white z-10">
+              <div className="p-3 px-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white z-10">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={clearAllCache}
+                    className="flex items-center gap-2 px-3 py-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors text-sm font-bold"
+                  >
+                    <Trash2 size={16} /> Clear All History
+                  </button>
+                </div>
                 <button onClick={() => setShowCacheHistory(false)} className="p-2 hover:bg-red-50 hover:text-red-500 rounded-xl transition-colors">
                   <X size={24} className="text-slate-400 hover:text-red-500" />
                 </button>
               </div>
 
               <div className="flex-1 overflow-hidden flex flex-col bg-slate-50/50">
-                {/* Visual Header / Controls */}
-                <div className="p-4 sm:p-6 space-y-4">
-                  {/* Header */}
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-                      <List size={24} />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-slate-900">File & Analysis Management</h3>
-                      <p className="text-xs text-slate-500">Manage transcripts and files</p>
-                    </div>
-                  </div>
-
+                {/* Controls Area */}
+                <div className="p-3 sm:p-4 space-y-3">
                   {/* Upload Button */}
                   <div className="relative">
                     <label
                       htmlFor="manager-file-upload"
-                      className="flex items-center justify-center gap-3 w-full p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl cursor-pointer shadow-lg shadow-indigo-200 transition-all group"
+                      className="flex items-center justify-center gap-3 w-full p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl cursor-pointer shadow-lg shadow-indigo-200 transition-all group"
                     >
                       <div className="p-2 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
                         <Upload size={24} />
@@ -1333,7 +1330,7 @@ const App = () => {
                       placeholder="Search analysis history..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all shadow-sm"
+                      className="w-full pl-12 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all shadow-sm"
                     />
                   </div>
                 </div>
@@ -1355,15 +1352,15 @@ const App = () => {
                     }
 
                     return (
-                      <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-6 space-y-3">
+                      <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4 space-y-2">
                         {/* 1. Analyzing Files */}
                         {analyzingFiles.map(f => (
                           <div
                             key={f.id}
-                            className="group flex items-center justify-between p-4 rounded-2xl border bg-indigo-50/50 border-indigo-200 shadow-sm"
+                            className="group flex items-center justify-between p-3 rounded-2xl border bg-indigo-50/50 border-indigo-200 shadow-sm"
                           >
                             <div className="flex items-center gap-4 min-w-0 flex-1">
-                              <div className="p-3 rounded-xl bg-indigo-100 text-indigo-600 animate-pulse">
+                              <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-600 animate-pulse">
                                 <FileVideo size={20} />
                               </div>
                               <div className="min-w-0">
@@ -1401,7 +1398,7 @@ const App = () => {
                               <div
                                 key={key}
                                 className={`
-                                  group flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all
+                                  group flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all
                                   ${isActive
                                     ? 'bg-indigo-50 border-indigo-200 shadow-md shadow-indigo-100'
                                     : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}
@@ -1409,7 +1406,7 @@ const App = () => {
                                 onClick={() => loadCache(key)}
                               >
                                 <div className="flex items-center gap-4 min-w-0 flex-1">
-                                  <div className={`p-3 rounded-xl ${isActive ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                  <div className={`p-2.5 rounded-xl ${isActive ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
                                     {isActive ? <Check size={20} /> : <BookOpen size={20} />}
                                   </div>
                                   <div className="min-w-0">
@@ -1433,21 +1430,11 @@ const App = () => {
                             );
                           })
                         }
-
-                        {cacheKeys.length > 0 && (
-                          <div className="pt-4 mt-4 border-t border-slate-200/50">
-                            <button
-                              onClick={clearAllCache}
-                              className="w-full py-4 text-slate-500 font-bold hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
-                            >
-                              <Trash2 size={16} /> Clear All History
-                            </button>
-                          </div>
-                        )}
                       </div>
                     );
                   })()
                 }
+
               </div>
             </div>
           </div>

@@ -77,7 +77,7 @@ export async function analyzeMedia(file, apiKey) {
     console.log(`Analyzing file: ${file.name} (${file.type}, ${file.size} bytes)`);
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     try {
         // Determine MIME type with fallback
