@@ -8,6 +8,7 @@ import {
   SkipBack, SkipForward, Clock, History, MoreVertical, XCircle, Home
 } from 'lucide-react';
 import { analyzeMedia } from './services/gemini';
+import { mediaStore } from './utils/MediaStore';
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -285,52 +286,92 @@ const App = () => {
     }
   }, [showSettings, showCacheHistory]);
 
-  const deleteCache = (key) => {
+  const deleteCache = async (key) => {
     if (confirm('Delete this cached transcript?')) {
+      const cachedStr = localStorage.getItem(key);
+      if (cachedStr) {
+        try {
+          const parsed = JSON.parse(cachedStr);
+          const metadata = (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed.metadata : null;
+          if (metadata && metadata.name && metadata.size) {
+            await mediaStore.deleteFile(metadata.name, metadata.size);
+          }
+        } catch (e) {
+          console.error("Failed to delete media file from store:", e);
+        }
+      }
       localStorage.removeItem(key);
       setCacheKeys(prev => prev.filter(k => k !== key));
     }
   };
 
-  const clearAllCache = () => {
+  const clearAllCache = async () => {
     const count = cacheKeys.length;
     if (confirm(`Clear all ${count} cached analysis files?`)) {
       cacheKeys.forEach(k => localStorage.removeItem(k));
+      await mediaStore.clearAll();
       setCacheKeys([]);
       alert("All cache cleared!");
     }
   };
 
-  const loadCache = (key) => {
+  const loadCache = async (key) => {
     // FORCE RESET
     resetPlayerState();
     setIsSwitchingFile(true);
 
-    const cachedData = localStorage.getItem(key);
-    if (cachedData) {
+    const cachedStr = localStorage.getItem(key);
+    if (cachedStr) {
       try {
-        const rawData = JSON.parse(cachedData);
-        const data = sanitizeData(rawData); // Sort & Sanitize
+        const parsed = JSON.parse(cachedStr);
+        // Handle new format {data, metadata} vs legacy format [items...]
+        const hasMetadata = parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.data;
+        const rawData = hasMetadata ? parsed.data : parsed;
+        const metadata = hasMetadata ? parsed.metadata : { name: key.replace('gemini_analysis_', '').replace(/_\d+$/, '') };
 
-        // Clean up name from key
-        const name = key.replace('gemini_analysis_', '').replace(/_\d+$/, '');
+        const data = sanitizeData(rawData);
+
+        // Try to find a matching file already uploaded
+        // We match by name and size if available
+        let matchingFile = null;
+        if (hasMetadata && metadata.size) {
+          matchingFile = files.find(f => f.file.name === metadata.name && f.file.size === metadata.size);
+        } else {
+          // Fallback to name only
+          matchingFile = files.find(f => f.file.name === metadata.name);
+        }
+
+        let mediaBlob = null;
+        let mediaUrl = matchingFile ? matchingFile.url : null;
+
+        // Try to load from MediaStore if not already in memory
+        if (!mediaUrl && metadata.name && metadata.size) {
+          try {
+            mediaBlob = await mediaStore.getFile(metadata.name, metadata.size);
+            if (mediaBlob) {
+              mediaUrl = URL.createObjectURL(mediaBlob);
+            }
+          } catch (e) {
+            console.error("Failed to load media from store:", e);
+          }
+        }
+
         const id = 'cached-' + Date.now();
+        const name = metadata.name;
 
         const newFileEntry = {
           id,
-          // We don't have the original File object, but we need these properties
-          file: { name, type: 'video/unknown' },
+          file: matchingFile ? matchingFile.file : { name, type: metadata.type || 'video/unknown', size: metadata.size },
           data,
-          url: null, // Media playback won't work without re-uploading
-          isAnalyzing: false
+          url: mediaUrl,
+          isAnalyzing: false,
+          isFromCache: true
         };
 
         setFiles(prev => [...prev, newFileEntry]);
         setActiveFileId(id);
         setShowSettings(false);
         setShowCacheHistory(false);
-        // Alert removed for smoother check
-        // alert(`Loaded analysis for: ${name}\nNote: Media playback requires re-selecting the file.`);
       } catch (e) {
         console.error("Failed to load cache:", e);
         alert("Failed to load cached data.");
@@ -638,9 +679,10 @@ const App = () => {
 
         if (cached) {
           console.log("Using cached analysis for", fItem.file.name);
-          const rawData = JSON.parse(cached);
+          const parsed = JSON.parse(cached);
+          const rawData = (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed.data : parsed;
           const data = sanitizeData(rawData);
-          setFiles(prev => prev.map(p => p.id === fItem.id ? { ...p, data: data, isAnalyzing: false } : p));
+          setFiles(prev => prev.map(p => p.id === fItem.id ? { ...p, data: data, isAnalyzing: false, isFromCache: true } : p));
         } else {
           // API Call
           // Update status to analyzing (redundant but safe)
@@ -662,12 +704,29 @@ const App = () => {
           }
 
           try {
-            localStorage.setItem(cacheKey, JSON.stringify(data));
+            const cacheData = {
+              data: data,
+              metadata: {
+                name: fItem.file.name,
+                size: fItem.file.size,
+                type: fItem.file.type,
+                lastModified: fItem.file.lastModified,
+                savedAt: Date.now()
+              }
+            };
+            localStorage.setItem(cacheKey, JSON.stringify(cacheData));
           } catch (e) {
             console.warn("Quota exceeded or failed to save to localStorage", e);
           }
 
           setFiles(prev => prev.map(p => p.id === fItem.id ? { ...p, data: data, isAnalyzing: false } : p));
+
+          // Save media to store after successful analysis
+          try {
+            await mediaStore.saveFile(fItem.file);
+          } catch (storageError) {
+            console.warn("Failed to save media file to store", storageError);
+          }
         }
       } catch (err) {
         console.error("Analysis Error", err);
@@ -929,9 +988,14 @@ const App = () => {
                     <FileAudio size={16} className={`shrink-0 ${isAnalyzing || isSwitchingFile ? 'text-slate-400 animate-pulse' : 'text-indigo-600'}`} />
                   )}
 
-                  {/* Text Binding with Analyzing State */}
+                  {/* Text Binding with Analyzing State or Active Sentence */}
                   <span className={`text-base font-bold truncate group-hover:text-indigo-700 transition-colors ${isAnalyzing || isSwitchingFile ? 'text-slate-500 italic' : ''}`}>
-                    {isAnalyzing || isSwitchingFile ? `Analyzing... ${activeFile.file.name}` : activeFile.file.name}
+                    {isAnalyzing || isSwitchingFile
+                      ? `Analyzing... ${activeFile.file.name}`
+                      : (currentSentenceIdx !== -1 && transcriptData[currentSentenceIdx])
+                        ? transcriptData[currentSentenceIdx].text
+                        : activeFile.file.name
+                    }
                   </span>
                 </div>
               ) : (
@@ -1016,19 +1080,34 @@ const App = () => {
             <div className="flex-none bg-white/95 backdrop-blur-md border-t border-slate-200 z-50 shadow-lg pb-safe">
               <div className="max-w-5xl mx-auto flex flex-row items-stretch h-[85px] sm:h-[100px]">
 
-                {/* Left: Video Thumbnail (Tall & Larger) */}
-                <div className="relative bg-black w-[110px] sm:w-[140px] shrink-0 overflow-hidden group border-r border-slate-100">
-                  <video
-                    ref={videoRef}
-                    src={mediaUrl}
-                    className="w-full h-full object-contain"
-                    onClick={togglePlay}
-                    playsInline
-                    loop
-                  />
-                  {!isPlaying && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-                      <Play size={24} fill="white" className="text-white ml-0.5" />
+                {/* Left: Video Thumbnail or Recovery UI */}
+                <div className="relative bg-black w-[110px] sm:w-[140px] shrink-0 overflow-hidden group border-r border-slate-100 flex items-center justify-center">
+                  {mediaUrl ? (
+                    <>
+                      <video
+                        ref={videoRef}
+                        src={mediaUrl}
+                        className="w-full h-full object-contain"
+                        onClick={togglePlay}
+                        playsInline
+                        loop
+                      />
+                      {!isPlaying && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                          <Play size={24} fill="white" className="text-white ml-0.5" />
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-2 text-center space-y-2">
+                      <AlertCircle size={24} className="text-red-400" />
+                      <div className="text-[10px] font-bold text-slate-300 leading-tight">
+                        원본 파일을<br />찾을 수 없습니다
+                      </div>
+                      <label className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold rounded cursor-pointer transition-colors">
+                        연결하기
+                        <input type="file" className="hidden" onChange={(e) => processFiles(e.target.files)} accept="audio/*,video/*" />
+                      </label>
                     </div>
                   )}
                 </div>
