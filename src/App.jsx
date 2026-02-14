@@ -5,7 +5,7 @@ import {
   Gauge, Repeat, Volume2, VolumeX, Info, Settings,
   X, Check, AlertCircle, BookOpen, ChevronLeft, ChevronRight,
   ChevronDown, ChevronUp, FileAudio, FileVideo, Plus, Trash2,
-  SkipBack, SkipForward, Clock, History, MoreVertical, XCircle
+  SkipBack, SkipForward, Clock, History, MoreVertical, XCircle, Home
 } from 'lucide-react';
 import { analyzeMedia } from './services/gemini';
 
@@ -899,7 +899,56 @@ const App = () => {
         </div>
       )}
 
-      {/* Header moved to inside scrollable areas */}
+      {/* Header - Now Sticky & Compact */}
+      <header className="sticky top-0 z-[60] bg-white/95 backdrop-blur-md border-b border-slate-200 flex items-center gap-2 px-3 py-1.5 shadow-sm">
+        {/* Left: Home Button (Back to Upload) */}
+        <button
+          onClick={() => {
+            setFiles([]);
+            setActiveFileId(null);
+            resetPlayerState();
+          }}
+          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+          title="Go to Home"
+        >
+          <Home size={20} />
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <div className="relative">
+            <button
+              onClick={() => setShowCacheHistory(true)}
+              className="w-full text-center px-4 py-1.5 hover:bg-slate-50 rounded-xl transition-colors group"
+            >
+              {activeFile ? (
+                <div className="flex items-center justify-center gap-2 text-slate-900">
+                  {/* Icon based on file type */}
+                  {activeFile.file.type.startsWith('video') ? (
+                    <FileVideo size={16} className={`shrink-0 ${isAnalyzing || isSwitchingFile ? 'text-slate-400 animate-pulse' : 'text-indigo-600'}`} />
+                  ) : (
+                    <FileAudio size={16} className={`shrink-0 ${isAnalyzing || isSwitchingFile ? 'text-slate-400 animate-pulse' : 'text-indigo-600'}`} />
+                  )}
+
+                  {/* Text Binding with Analyzing State */}
+                  <span className={`text-base font-bold truncate group-hover:text-indigo-700 transition-colors ${isAnalyzing || isSwitchingFile ? 'text-slate-500 italic' : ''}`}>
+                    {isAnalyzing || isSwitchingFile ? `Analyzing... ${activeFile.file.name}` : activeFile.file.name}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-base font-bold text-slate-400">Select File...</span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Right: Settings (Optional shortcut) */}
+        <button
+          onClick={() => setShowSettings(true)}
+          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+        >
+          <Settings size={20} />
+        </button>
+      </header>
 
       {/* Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
@@ -908,92 +957,6 @@ const App = () => {
         {activeFile ? (
           <div className="flex flex-col h-full">
             <div className="flex-1 w-full overflow-y-auto bg-[#F8FAFC]" onClick={() => { setShowSpeedMenu(false); setShowFileList(false); }}>
-
-              {/* Header Element - Now Inside Scroll View but Sticky-ish behavior if needed, 
-                  but user asked for non-fixed. 
-                  NOTE: Top Bar Sync Logic Implemented Here 
-              */}
-              <header className="flex-none bg-white border-b border-slate-200 flex items-center justify-between px-4 py-3 z-20 shadow-sm relative">
-                <div className="flex-1 min-w-0">
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowCacheHistory(true)}
-                      className="w-full text-center px-4 py-2 hover:bg-slate-50 rounded-xl transition-colors group"
-                    >
-                      <div className="flex items-center justify-center gap-2 text-slate-900">
-                        {/* Icon based on file type */}
-                        {activeFile.file.type.startsWith('video') ? (
-                          <FileVideo size={16} className={`shrink-0 ${isAnalyzing || isSwitchingFile ? 'text-slate-400 animate-pulse' : 'text-indigo-600'}`} />
-                        ) : (
-                          <FileAudio size={16} className={`shrink-0 ${isAnalyzing || isSwitchingFile ? 'text-slate-400 animate-pulse' : 'text-indigo-600'}`} />
-                        )}
-
-                        {/* Text Binding with Analyzing State */}
-                        <span className={`text-lg font-bold truncate group-hover:text-indigo-700 transition-colors ${isAnalyzing || isSwitchingFile ? 'text-slate-500 italic' : ''}`}>
-                          {isAnalyzing || isSwitchingFile ? `Analyzing... ${activeFile.file.name}` : activeFile.file.name}
-                        </span>
-                      </div>
-                    </button>
-
-                    {/* File List Popup (kept as is, just ensured it uses same logic if needed) */}
-                    {showFileList && (
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-100 p-2 z-50 animate-in zoom-in-95 duration-200">
-                        {/* ... existing file list content ... */}
-                        {/* NOTE: We aren't changing the inner content of FileList popup in this block, 
-                             so we can assume it renders standard file list. 
-                             However, to be safe and clean, we should just keep the existing `headerElement` variable
-                             concept or strictly inline it here.
-                             The previous code defined `headerElement` outside.
-                             Let's inline it to ensure state binding is fresh. 
-                         */}
-                        {/* Actually, the previous code used `headerElement` variable. 
-                             I will REPLACE the usage of `headerElement` with this inline code 
-                             to ensure it re-renders with state changes correctly.
-                         */}
-                        <div className="flex items-center justify-between px-2 py-1 mb-2 border-b border-slate-50">
-                          <span className="text-xs font-bold text-slate-500 uppercase">Active Files</span>
-                          <label className="cursor-pointer text-indigo-600 hover:text-indigo-700 p-1 rounded hover:bg-indigo-50" title="Add File">
-                            <Plus size={16} />
-                            <input type="file" multiple className="hidden" onChange={(e) => { processFiles(e.target.files); setShowFileList(false); }} accept="audio/*,video/*" />
-                          </label>
-                        </div>
-                        <div className="max-h-60 overflow-y-auto space-y-1">
-                          {files.length === 0 ? (
-                            <div className="text-center py-4 text-slate-400 text-sm">No files added</div>
-                          ) : (
-                            files.map(f => (
-                              <div
-                                key={f.id}
-                                onClick={() => {
-                                  // FORCE RESET ON SWITCH
-                                  if (activeFileId !== f.id) {
-                                    setIsSwitchingFile(true);
-                                    resetPlayerState();
-                                    setActiveFileId(f.id);
-                                  }
-                                  setShowFileList(false);
-                                }}
-                                className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${f.id === activeFileId ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 text-slate-700'}`}
-                              >
-                                {f.file.type.startsWith('video') ? <FileVideo size={14} /> : <FileAudio size={14} />}
-                                <span className="text-sm font-medium truncate flex-1">{f.file.name}</span>
-                                <button onClick={(e) => removeFile(f.id, e)} className="p-1 text-slate-300 hover:text-red-500 rounded"><X size={14} /></button>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                        {files.length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-slate-50">
-                            <button onClick={removeAllFiles} className="w-full py-1.5 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1">
-                              <Trash2 size={12} /> Clear All Files
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </header>
 
               <div className="max-w-6xl mx-auto px-0.5 py-4 sm:px-2 md:p-6 pb-32">
                 {isAnalyzing || isSwitchingFile ? (
@@ -1172,7 +1135,6 @@ const App = () => {
           </div>
         ) : (
           <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
-            {headerElement}
             <div className="flex-1 flex items-center justify-center p-10">
               <div className="max-w-md w-full p-8 bg-white rounded-3xl border-2 border-dashed border-slate-200 text-center space-y-4">
                 <div className="inline-flex p-4 bg-slate-50 rounded-2xl text-slate-400">
@@ -1183,7 +1145,7 @@ const App = () => {
                   <p className="text-slate-500 mt-1">Upload or select a file to start the analysis.</p>
                 </div>
                 <button
-                  onClick={() => setShowFileList(true)}
+                  onClick={() => setShowCacheHistory(true)}
                   className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-100"
                 >
                   Select from List
