@@ -212,41 +212,28 @@ const App = () => {
     if (typeof timeStr === 'number') return Math.max(0, timeStr);
 
     // 1. Take only the FIRST part if there's a range (-, ~, to, 등)
-    let baseTime = timeStr.toString().split(/[-~]/)[0];
+    let raw = timeStr.toString().split(/[-~]/)[0];
 
-    // 2. Clean string: remove [], spaces, and normalize comma to dot
-    const cleanStr = baseTime
-      .replace(/[\[\]\s\r\n\t]/g, '')
-      .replace(',', '.')
-      .trim();
+    // 2. Extract ONLY numbers, colons, and dots (Ignore [], spaces, etc.)
+    const clean = raw.replace(/[^\d:.]/g, '');
+    if (!clean) return 0;
 
-    // 3. Strip milliseconds part for numeric comparison stability
-    // We only care about the integer seconds for the main tracking
-    const mainTime = cleanStr.split('.')[0];
-
-    // 4. Split by colons
-    const parts = mainTime.split(':');
-
+    // 3. Robust Calculation Logic
+    const parts = clean.split(':');
     try {
-      let totalSeconds = 0;
-      if (parts.length === 3) {
-        // HH:MM:SS
-        const h = parseFloat(parts[0]) || 0;
-        const m = parseFloat(parts[1]) || 0;
-        const s = parseFloat(parts[2]) || 0;
-        totalSeconds = (h * 3600) + (m * 60) + s;
-      } else if (parts.length === 2) {
-        // MM:SS
-        const m = parseFloat(parts[0]) || 0;
-        const s = parseFloat(parts[1]) || 0;
-        totalSeconds = (m * 60) + s;
-      } else if (parts.length === 1) {
-        // Raw Seconds or SS
-        totalSeconds = parseFloat(parts[0]) || 0;
+      if (parts.length >= 2) {
+        // Reversed parts handles [SS.ms, MM, HH]
+        const rev = parts.reverse();
+        const s = parseFloat(rev[0]) || 0;
+        const m = parseFloat(rev[1]) || 0;
+        const h = parseFloat(rev[2]) || 0;
+        return (h * 3600) + (m * 60) + s;
+      } else {
+        // Pure Seconds (e.g. "14", "105.1")
+        return parseFloat(clean) || 0;
       }
-      return totalSeconds;
     } catch (e) {
-      console.error("Critical: Error parsing time string:", timeStr, e);
+      console.error("Timeline Parse Error:", timeStr, e);
       return 0;
     }
   };
