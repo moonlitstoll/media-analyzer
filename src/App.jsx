@@ -221,12 +221,6 @@ const App = () => {
   const videoRef = useRef(null);
   const activeIdxRef = useRef(null);
   const loopingSentenceIdxRef = useRef(null);
-  const transcriptRef = useRef([]);
-
-  // Sync ref with state
-  useEffect(() => {
-    transcriptRef.current = transcriptData;
-  }, [transcriptData]);
 
   // Derived active file
   const activeFile = files.find(f => f.id === activeFileId);
@@ -498,89 +492,64 @@ const App = () => {
 
   // --- SYNC ENGINE (High-Precision 100ms) ---
 
-  // Precise Index Calculation (Stateless "Reverse Scan" Lookup)
-  const findActiveIndex = useCallback((time) => {
-    try {
-      const data = transcriptRef.current;
-      if (!data || data.length === 0) return -1;
-
-      // BACKWARDS LOOP: Find first item from the end that is <= time
-      for (let i = data.length - 1; i >= 0; i--) {
-        const item = data[i];
-        if (!item) continue;
-
-        // Safety: ensure it's a number
-        const startTime = typeof item.seconds === 'number' ? item.seconds : parseFloat(item.seconds || 0);
-        if (startTime <= time) {
-          return i;
-        }
-      }
-    } catch (e) {
-      console.warn("Index lookup error:", e);
-    }
-    return -1;
+  // Basic Index Calculation
+  const findActiveIndex = useCallback((time, data) => {
+    if (!data || data.length === 0) return -1;
+    // Standard approach: find the item where time is within [start, nextStart)
+    const idx = data.findIndex((item, i) => {
+      const start = item.seconds;
+      const end = (i < data.length - 1) ? data[i + 1].seconds : (videoRef.current?.duration || Infinity);
+      return time >= start && time < end;
+    });
+    return idx;
   }, []);
 
-  // Sync Loop (High-Performance requestAnimationFrame)
+  // Standard Sync Engine (Event-Listener based)
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !activeFile?.data) return;
 
     v.loop = loopingSentenceIdxRef.current === null;
 
-    let rAF;
-
     const runSync = () => {
-      try {
-        // SAFETY GUARD: Use optional chaining and null checks
-        const vRef = videoRef.current;
-        const tData = transcriptRef.current;
+      const now = v.currentTime;
+      setCurrentTime(now);
 
-        if (!vRef || !tData || tData.length === 0) {
-          return;
-        }
+      const newIdx = findActiveIndex(now, activeFile.data);
 
-        const now = vRef.currentTime;
-        setCurrentTime(now);
-
-        // 1. Find Current Index (Reverse Scan via Ref)
-        const newIdx = findActiveIndex(now);
-
-        if (newIdx !== activeIdxRef.current) {
-          activeIdxRef.current = newIdx;
-          setActiveSentenceIdx(newIdx);
-        }
-
-        // 2. Loop Logic
-        const loopIdx = loopingSentenceIdxRef.current;
-        if (loopIdx !== null) {
-          const item = tData[loopIdx];
-          if (item) {
-            const start = Math.max(0, item.seconds - BUFFER_SECONDS);
-            const end = (loopIdx < tData.length - 1)
-              ? (tData[loopIdx + 1]?.seconds || vRef.duration) + BUFFER_SECONDS
-              : vRef.duration + BUFFER_SECONDS;
-
-            if (now >= end - 0.1 || (vRef.ended && loopIdx === tData.length - 1)) {
-              vRef.currentTime = start;
-              vRef.play().catch(() => { });
-            }
-          }
-        }
-      } catch (e) {
-        console.warn("Sync loop error:", e);
+      if (newIdx !== activeIdxRef.current) {
+        activeIdxRef.current = newIdx;
+        setActiveSentenceIdx(newIdx);
       }
 
-      rAF = requestAnimationFrame(runSync);
+      // Loop Logic
+      const loopIdx = loopingSentenceIdxRef.current;
+      if (loopIdx !== null) {
+        const item = activeFile.data[loopIdx];
+        if (item) {
+          const start = Math.max(0, item.seconds - BUFFER_SECONDS);
+          const end = (loopIdx < activeFile.data.length - 1)
+            ? activeFile.data[loopIdx + 1].seconds + BUFFER_SECONDS
+            : v.duration + BUFFER_SECONDS;
+
+          if (now >= end - 0.1 || (v.ended && loopIdx === activeFile.data.length - 1)) {
+            v.currentTime = start;
+            v.play().catch(() => { });
+          }
+        }
+      }
     };
 
-    // Start only if activeFile exists
-    if (activeFile?.data) {
-      rAF = requestAnimationFrame(runSync);
-    }
+    v.addEventListener('timeupdate', runSync);
+    v.addEventListener('play', runSync);
+    v.addEventListener('pause', runSync);
+    v.addEventListener('ended', runSync);
 
     return () => {
-      if (rAF) cancelAnimationFrame(rAF);
+      v.removeEventListener('timeupdate', runSync);
+      v.removeEventListener('play', runSync);
+      v.removeEventListener('pause', runSync);
+      v.removeEventListener('ended', runSync);
     };
   }, [activeFile, findActiveIndex]);
 
