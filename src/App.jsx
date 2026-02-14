@@ -75,7 +75,7 @@ const TranscriptItem = memo(({
     <div
       ref={itemRef}
       className={`
-        group relative transition-all duration-300 ease-out mb-4 scroll-mt-24 rounded-xl border-l-[4px] p-4 sm:p-5
+        group relative transition-all duration-300 ease-out mb-4 scroll-mt-24 rounded-xl border border-l-[4px] p-4 sm:p-5
         ${isActive
           ? 'bg-transparent border-l-purple-700 border-t-slate-100 border-r-slate-100 border-b-slate-100 shadow-md z-10'
           : 'bg-white border-slate-100 opacity-90'}
@@ -106,7 +106,7 @@ const TranscriptItem = memo(({
           onClick={() => jumpToSentence(idx)}
           className={`
             text-xl sm:text-2xl md:text-3xl leading-relaxed cursor-pointer transition-all duration-300 mb-2 px-1
-            ${isActive ? 'text-black font-bold' : 'text-slate-900'}
+            ${isActive ? 'text-black font-bold tracking-tight' : 'text-slate-900'}
           `}
         >
           {item.text}
