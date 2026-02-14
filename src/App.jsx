@@ -75,28 +75,28 @@ const TranscriptItem = memo(({
     <div
       ref={itemRef}
       className={`
-        group relative transition-all duration-300 ease-out mb-4 scroll-mt-24 rounded-2xl border bg-white shadow-sm p-4 sm:p-5
+        group relative transition-all duration-300 ease-out mb-4 scroll-mt-24 rounded-2xl border p-4 sm:p-5
         ${isActive
-          ? 'border-purple-200 bg-purple-50/50 border-l-[4px] border-l-purple-600 shadow-md ring-1 ring-purple-100/50'
-          : 'border-slate-100 hover:border-slate-200 active:bg-slate-50'}
+          ? 'bg-purple-600 border-purple-600 shadow-xl scale-[1.02] z-10'
+          : 'bg-white border-slate-100 opacity-90'}
       `}
     >
 
-      {/* Looping Indicator (Top Right) */}
+      {/* Looping Indicator */}
       {isLooping && (
-        <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-bold uppercase tracking-wider animate-pulse shadow-sm border border-amber-200 z-10">
+        <div className={`absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider animate-pulse shadow-sm border z-10 ${isActive ? 'bg-white/20 text-white border-white/30' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
           <Repeat size={10} className="stroke-[3]" /> Looping
         </div>
       )}
 
       <div>
-        {/* Header: Timestamp & Controls */}
+        {/* Header: Timestamp */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
           <button
             onClick={() => seekTo(item.seconds)}
             className={`
               flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-bold font-mono tracking-wide transition-all
-              ${isActive ? 'bg-purple-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}
+              ${isActive ? 'bg-white/20 text-white border border-white/30' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}
             `}
           >
             <Play size={10} fill="currentColor" /> {item.timestamp}
@@ -106,7 +106,7 @@ const TranscriptItem = memo(({
           onClick={() => jumpToSentence(idx)}
           className={`
             text-xl sm:text-2xl md:text-3xl leading-relaxed cursor-pointer transition-all duration-300 mb-2 px-1
-            text-slate-800
+            ${isActive ? 'text-white' : 'text-slate-900'}
           `}
         >
           {item.text}
@@ -519,25 +519,22 @@ const App = () => {
   // Quick Sync Handler Removed
 
 
-  // UNIFIED MASTER SYNC: Identify Active Item (Millisecond Precision)
+  // MASTER FILTER-SORT-SELECT SYNC ENGINE
   const findActiveIndex = useCallback((timeInSeconds, data) => {
     if (!data || data.length === 0) return 0;
 
-    // CONVERT TO MILLISECONDS (Integer) to avoid boundary issues at 01:00
-    const currentMs = Math.floor(timeInSeconds * 1000);
+    // 1. FILTER: Segments that have already started
+    const candidates = data
+      .map((item, index) => ({ seconds: item.seconds, index }))
+      .filter(item => item.seconds <= timeInSeconds);
 
-    let activeIdx = 0;
-    let maxStartMs = -1;
+    if (candidates.length === 0) return 0;
 
-    for (let i = 0; i < data.length; i++) {
-      const segmentMs = data[i].startMs;
-      if (segmentMs <= currentMs && segmentMs > maxStartMs) {
-        maxStartMs = segmentMs;
-        activeIdx = i;
-      }
-    }
+    // 2. SORT: Descending by start time to get the latest one
+    candidates.sort((a, b) => b.seconds - a.seconds);
 
-    return activeIdx;
+    // 3. SELECT: Return the index of the first (latest) candidate
+    return candidates[0].index;
   }, []);
 
   // Stateless Sync Engine (High-Res Event Listening)
