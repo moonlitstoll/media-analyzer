@@ -53,23 +53,26 @@ const TranscriptItem = memo(({
 }) => {
   const itemRef = useRef(null);
 
-  // 1. Force Auto-Scroll on Active Change (Always Top) - Paused during Looping
+  // 1. Focus Lock: Absolute Top Anchoring
+  // Trigger on: 1) Active change (non-looping), 2) Start of looping
   useEffect(() => {
-    if (isActive && itemRef.current && !isGlobalLooping && !isLooping) {
+    const shouldScroll = (isActive && !isGlobalLooping && !isLooping) || isLooping;
+    if (shouldScroll && itemRef.current) {
       itemRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-        inline: 'nearest'
+        behavior: isLooping ? 'auto' : 'smooth', // Instant lock during looping
+        block: 'start'
       });
     }
   }, [isActive, isGlobalLooping, isLooping]);
 
-  // 2. Instant Scroll Anchoring on Layout Change (Toggle Analysis) - Paused during Looping
+  // 2. Resize Stabilization: Re-align to top when contents expand/collapse
+  // This ensures that toggling Analysis doesn't push the lyric out of view.
   useLayoutEffect(() => {
-    if (isActive && itemRef.current && !isGlobalLooping && !isLooping) {
-      itemRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
+    if (isActive && itemRef.current) {
+      // Use instant scroll to "lock" the position during resize
+      itemRef.current.scrollIntoView({ behavior: 'auto', block: 'start' });
     }
-  }, [showAnalysis, isGlobalLooping, isLooping]);
+  }, [showAnalysis, showTranslations]);
 
   return (
     <div
