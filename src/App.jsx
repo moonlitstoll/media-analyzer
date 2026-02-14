@@ -209,32 +209,39 @@ const App = () => {
   // Formula: (M * 60) + S + (ms / 1000)
   const parseTime = (timeStr) => {
     if (!timeStr) return 0;
-    if (typeof timeStr === 'number') return timeStr;
+    if (typeof timeStr === 'number') return Math.max(0, timeStr);
 
-    // 1. Clean string: remove [], spaces, and normalize comma to dot
-    const cleanStr = timeStr.toString()
+    // 1. Take only the FIRST part if there's a range (-, ~, to, 등)
+    let baseTime = timeStr.toString().split(/[-~]/)[0];
+
+    // 2. Clean string: remove [], spaces, and normalize comma to dot
+    const cleanStr = baseTime
       .replace(/[\[\]\s\r\n\t]/g, '')
       .replace(',', '.')
       .trim();
 
-    // 2. Split by colons
-    const parts = cleanStr.split(':');
+    // 3. Strip milliseconds part for numeric comparison stability
+    // We only care about the integer seconds for the main tracking
+    const mainTime = cleanStr.split('.')[0];
+
+    // 4. Split by colons
+    const parts = mainTime.split(':');
 
     try {
       let totalSeconds = 0;
       if (parts.length === 3) {
-        // HH:MM:SS.ms
+        // HH:MM:SS
         const h = parseFloat(parts[0]) || 0;
         const m = parseFloat(parts[1]) || 0;
         const s = parseFloat(parts[2]) || 0;
         totalSeconds = (h * 3600) + (m * 60) + s;
       } else if (parts.length === 2) {
-        // MM:SS.ms
+        // MM:SS
         const m = parseFloat(parts[0]) || 0;
         const s = parseFloat(parts[1]) || 0;
         totalSeconds = (m * 60) + s;
       } else if (parts.length === 1) {
-        // SS.ms or Raw Seconds
+        // Raw Seconds or SS
         totalSeconds = parseFloat(parts[0]) || 0;
       }
       return totalSeconds;
