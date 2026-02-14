@@ -77,7 +77,7 @@ const TranscriptItem = memo(({
       className={`
         group relative transition-all duration-300 ease-out mb-4 scroll-mt-24 rounded-2xl border bg-white shadow-sm p-4 sm:p-5
         ${isActive
-          ? 'border-purple-200 bg-purple-50/50 border-l-[6px] border-l-purple-600 shadow-md ring-1 ring-purple-100/50'
+          ? 'border-purple-200 bg-purple-50/50 border-l-[4px] border-l-purple-600 shadow-md ring-1 ring-purple-100/50'
           : 'border-slate-100 hover:border-slate-200 active:bg-slate-50'}
       `}
     >
@@ -95,7 +95,7 @@ const TranscriptItem = memo(({
           <button
             onClick={() => seekTo(item.seconds)}
             className={`
-              flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-bold font-mono tracking-wide transition-all 
+              flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-bold font-mono tracking-wide transition-all
               ${isActive ? 'bg-purple-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}
             `}
           >
@@ -106,7 +106,7 @@ const TranscriptItem = memo(({
           onClick={() => jumpToSentence(idx)}
           className={`
             text-xl sm:text-2xl md:text-3xl leading-relaxed cursor-pointer transition-all duration-300 mb-2 px-1
-            text-slate-900 font-medium
+            text-slate-800
           `}
         >
           {item.text}
@@ -231,10 +231,10 @@ const App = () => {
 
 
 
-  // Helper: Parse HH:MM:SS.ms or MM:SS.ms or total seconds to float
+  // Helper: Parse HH:MM:SS.ms to total MILLISECONDS (Integer)
   const parseTime = (timeStr) => {
-    if (!timeStr) return 0.0;
-    if (typeof timeStr === 'number') return timeStr;
+    if (!timeStr) return 0;
+    if (typeof timeStr === 'number') return Math.floor(timeStr * 1000);
 
     // Remove brackets, spaces, and other non-time characters
     const cleanStr = timeStr.toString().replace(/[\[\]\s\r\n\t]/g, '').trim();
@@ -243,29 +243,30 @@ const App = () => {
     const parts = cleanStr.split(':');
 
     try {
+      let totalSeconds = 0;
       if (parts.length === 3) {
         // HH:MM:SS.ms
         const hours = parseFloat(parts[0]) || 0;
         const minutes = parseFloat(parts[1]) || 0;
         const seconds = parseFloat(parts[2]) || 0;
-        return (hours * 3600) + (minutes * 60) + seconds;
+        totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
       } else if (parts.length === 2) {
         // MM:SS.ms
         const minutes = parseFloat(parts[0]) || 0;
         const seconds = parseFloat(parts[1]) || 0;
-        return (minutes * 60) + seconds;
+        totalSeconds = (minutes * 60) + seconds;
       } else if (parts.length === 1) {
         // SS.ms or total seconds
-        return parseFloat(parts[0]) || 0;
+        totalSeconds = parseFloat(parts[0]) || 0;
       }
+      return Math.floor(totalSeconds * 1000);
     } catch (e) {
       console.error("Error parsing time string:", timeStr, e);
     }
 
-    return 0.0;
+    return 0;
   };
 
-  // Helper: Sanitize & Sort Data
   // Helper: Sanitize & Sort Data
   const sanitizeData = (data) => {
     if (!Array.isArray(data)) {
@@ -304,15 +305,16 @@ const App = () => {
           }));
         }
 
-        // STICKY RULE: Numeric Precision at Load Time
-        let seconds = 0;
+        // MASTER MILLISECOND ENGINE: Always store startMs for sync
+        let startMs = 0;
         if (typeof secondsValue === 'number') {
-          seconds = secondsValue;
+          startMs = Math.floor(secondsValue * 1000);
         } else if (typeof timestamp === 'string') {
-          seconds = parseTime(timestamp);
+          startMs = parseTime(timestamp);
         }
-        seconds = isNaN(seconds) ? 0 : seconds;
+        startMs = isNaN(startMs) ? 0 : startMs;
 
+        const seconds = startMs / 1000;
         let endSeconds = seconds + 3.0; // Default gap-fill: 3s
         if (typeof endValue === 'number') {
           endSeconds = endValue;
@@ -326,6 +328,7 @@ const App = () => {
         return {
           timestamp,
           seconds,
+          startMs,
           endSeconds,
           text,
           translation,
@@ -334,7 +337,7 @@ const App = () => {
           isAnalyzed: !!(item.p || item.patterns || item.w || item.words)
         };
       })
-      .sort((a, b) => a.seconds - b.seconds);
+      .sort((a, b) => a.startMs - b.startMs);
   };
 
   // Sync ref
@@ -520,14 +523,14 @@ const App = () => {
   const findActiveIndex = useCallback((timeInSeconds, data) => {
     if (!data || data.length === 0) return 0;
 
-    // CONVERT TO MILLISECONDS (Integer) to avoid floating point issues
+    // CONVERT TO MILLISECONDS (Integer) to avoid boundary issues at 01:00
     const currentMs = Math.floor(timeInSeconds * 1000);
 
     let activeIdx = 0;
     let maxStartMs = -1;
 
     for (let i = 0; i < data.length; i++) {
-      const segmentMs = Math.floor(data[i].seconds * 1000);
+      const segmentMs = data[i].startMs;
       if (segmentMs <= currentMs && segmentMs > maxStartMs) {
         maxStartMs = segmentMs;
         activeIdx = i;
