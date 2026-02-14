@@ -492,34 +492,36 @@ const App = () => {
 
   // --- SYNC ENGINE (High-Precision 100ms) ---
 
-  // Strict Index Calculation
+  // Precise Index Calculation (Stateless "Last-Available" Lookup)
   const findActiveIndex = useCallback((time, data) => {
-    if (!data || data.length === 0) return null;
-    // Binary search or simple find? Simple find is fast enough for <1000 items
-    // Strict Condition: time >= item.start && time < nextItem.start
-    // Using seconds (float)
-    const idx = data.findIndex((item, i) => {
-      const start = item.seconds;
-      const end = (i < data.length - 1) ? data[i + 1].seconds : (videoRef.current?.duration || Infinity);
-      return time >= start && time < end;
-    });
-    return idx;
+    if (!data || data.length === 0) return -1;
+
+    let lastIdx = -1;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].seconds <= time) {
+        lastIdx = i;
+      } else {
+        // Since data is sorted, we can stop early
+        break;
+      }
+    }
+    return lastIdx;
   }, []);
 
-  // Sync Loop (High-Frequency 100ms)
+  // Sync Loop (High-Performance requestAnimationFrame)
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !activeFile?.data) return;
 
     v.loop = loopingSentenceIdxRef.current === null;
 
-    let syncInterval;
+    let rAF;
 
     const runSync = () => {
       const now = v.currentTime;
       setCurrentTime(now);
 
-      // Stateless Lookup: Always find from the whole array
+      // 1. Find Current Index (Stateless)
       const newIdx = findActiveIndex(now, activeFile.data);
 
       if (newIdx !== activeIdxRef.current) {
@@ -527,7 +529,7 @@ const App = () => {
         setActiveSentenceIdx(newIdx);
       }
 
-      // Loop Logic
+      // 2. Loop Logic
       const loopIdx = loopingSentenceIdxRef.current;
       if (loopIdx !== null) {
         const item = activeFile.data[loopIdx];
@@ -539,35 +541,19 @@ const App = () => {
 
           if (now >= end - 0.1 || (v.ended && loopIdx === activeFile.data.length - 1)) {
             v.currentTime = start;
-            v.play();
+            v.play().catch(() => { });
           }
         }
       }
+
+      rAF = requestAnimationFrame(runSync);
     };
 
-    const startSync = () => {
-      if (syncInterval) clearInterval(syncInterval);
-      syncInterval = setInterval(runSync, 100);
-      runSync();
-    };
-
-    const stopSync = () => {
-      if (syncInterval) clearInterval(syncInterval);
-    };
-
-    v.addEventListener('play', startSync);
-    v.addEventListener('pause', stopSync);
-    v.addEventListener('ended', stopSync);
-    v.addEventListener('timeupdate', runSync); // Robust backup
-
-    if (!v.paused) startSync();
+    // Start immediately
+    rAF = requestAnimationFrame(runSync);
 
     return () => {
-      stopSync();
-      v.removeEventListener('play', startSync);
-      v.removeEventListener('pause', stopSync);
-      v.removeEventListener('ended', stopSync);
-      v.removeEventListener('timeupdate', runSync);
+      if (rAF) cancelAnimationFrame(rAF);
     };
   }, [activeFile, findActiveIndex]);
 
@@ -970,8 +956,13 @@ const App = () => {
         </div>
       )}
 
+      {/* Debug Monitor */}
+      <div className="fixed top-0 left-0 z-[9999] pointer-events-none p-1 bg-black/80 text-[10px] font-mono font-bold text-red-500 rounded-br-lg shadow-lg">
+        [DEBUG] Time: {currentTime.toFixed(2)}s | Active Idx: {currentSentenceIdx} | Target Time: {currentSentenceIdx !== -1 && transcriptData[currentSentenceIdx] ? transcriptData[currentSentenceIdx].seconds.toFixed(2) : 'N/A'}s
+      </div>
+
       {/* Header - Now Sticky & Compact */}
-      <header className="sticky top-0 z-[60] bg-white/95 backdrop-blur-md border-b border-slate-200 flex items-center gap-2 px-3 py-1.5 shadow-sm">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 flex-none h-14 sm:h-16 flex items-center justify-between px-3 sm:px-6">
         {/* Left: Home Button (Back to Upload) */}
         <button
           onClick={() => {
