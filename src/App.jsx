@@ -231,40 +231,43 @@ const App = () => {
 
 
 
-  // Helper: Parse HH:MM:SS.ms to total MILLISECONDS (Integer)
+  // Robust Helper: Parse HH:MM:SS.ms to total MILLISECONDS (Integer)
   const parseTime = (timeStr) => {
     if (!timeStr) return 0;
     if (typeof timeStr === 'number') return Math.floor(timeStr * 1000);
 
-    // Remove brackets, spaces, and other non-time characters
-    const cleanStr = timeStr.toString().replace(/[\[\]\s\r\n\t]/g, '').trim();
+    // 1. Clean string: remove [], spaces, and normalize comma to dot
+    const cleanStr = timeStr.toString()
+      .replace(/[\[\]\s\r\n\t]/g, '')
+      .replace(',', '.')
+      .trim();
 
-    // Split by colons
+    // 2. Split by colons
     const parts = cleanStr.split(':');
 
     try {
-      let totalSeconds = 0;
+      let totalMs = 0;
       if (parts.length === 3) {
         // HH:MM:SS.ms
-        const hours = parseFloat(parts[0]) || 0;
-        const minutes = parseFloat(parts[1]) || 0;
-        const seconds = parseFloat(parts[2]) || 0;
-        totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+        const h = parseInt(parts[0], 10) || 0;
+        const m = parseInt(parts[1], 10) || 0;
+        const s = parseFloat(parts[2]) || 0;
+        totalMs = (h * 3600000) + (m * 60000) + Math.floor(s * 1000);
       } else if (parts.length === 2) {
         // MM:SS.ms
-        const minutes = parseFloat(parts[0]) || 0;
-        const seconds = parseFloat(parts[1]) || 0;
-        totalSeconds = (minutes * 60) + seconds;
+        const m = parseInt(parts[0], 10) || 0;
+        const s = parseFloat(parts[1]) || 0;
+        totalMs = (m * 60000) + Math.floor(s * 1000);
       } else if (parts.length === 1) {
         // SS.ms or total seconds
-        totalSeconds = parseFloat(parts[0]) || 0;
+        const s = parseFloat(parts[0]) || 0;
+        totalMs = Math.floor(s * 1000);
       }
-      return Math.floor(totalSeconds * 1000);
+      return totalMs;
     } catch (e) {
-      console.error("Error parsing time string:", timeStr, e);
+      console.error("Critical: Error parsing time string:", timeStr, e);
+      return 0;
     }
-
-    return 0;
   };
 
   // Helper: Sanitize & Sort Data
@@ -305,12 +308,13 @@ const App = () => {
           }));
         }
 
-        // MASTER MILLISECOND ENGINE: Always store startMs for sync
+        // MASTER MILLISECOND ENGINE (Integer Precision)
+        // PRIORITIZE TIMESTAMP STRING to match user view
         let startMs = 0;
-        if (typeof secondsValue === 'number') {
-          startMs = Math.floor(secondsValue * 1000);
-        } else if (typeof timestamp === 'string') {
+        if (typeof timestamp === 'string' && timestamp.length > 0) {
           startMs = parseTime(timestamp);
+        } else if (typeof secondsValue === 'number') {
+          startMs = Math.floor(secondsValue * 1000);
         }
         startMs = isNaN(startMs) ? 0 : startMs;
 
@@ -537,7 +541,7 @@ const App = () => {
     return candidates[0].index;
   }, []);
 
-  // Stateless Sync Engine (High-Res Event Listening)
+  // High-Resolution Sync Engine (Absolute Tracking)
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !activeFile?.data) return;
@@ -545,40 +549,50 @@ const App = () => {
     v.loop = loopingSentenceIdxRef.current === null;
 
     const runSync = () => {
-      const now = v.currentTime;
-      const nowMs = Math.floor(now * 1000); // Integer Milliseconds
-      setCurrentTime(now);
+      if (!v) return;
+      const nowMs = Math.floor(v.currentTime * 1000);
+      setCurrentTime(v.currentTime);
 
-      // STICKY LOOKUP: Stateless search using Absolute Coordinates
-      const newIdx = findActiveIndex(nowMs, activeFile.data);
+      // NO REFS STALE CLOSURE FIX: Use latest data implicitly
+      const data = activeFile.data;
+      if (!data || data.length === 0) return;
+
+      const newIdx = findActiveIndex(nowMs, data);
 
       if (newIdx !== activeIdxRef.current) {
         activeIdxRef.current = newIdx;
         setActiveSentenceIdx(newIdx);
       }
 
-      // Standard Loop Logic
+      // Loop Handling
       const loopIdx = loopingSentenceIdxRef.current;
-      if (loopIdx !== null) {
-        const item = activeFile.data[loopIdx];
-        if (item) {
-          const start = Math.max(0, item.seconds - BUFFER_SECONDS);
-          const end = (loopIdx < activeFile.data.length - 1)
-            ? activeFile.data[loopIdx + 1].seconds + BUFFER_SECONDS
-            : v.duration + BUFFER_SECONDS;
+      if (loopIdx !== null && data[loopIdx]) {
+        const item = data[loopIdx];
+        const start = Math.max(0, item.seconds - BUFFER_SECONDS);
+        const end = (loopIdx < data.length - 1)
+          ? data[loopIdx + 1].seconds + BUFFER_SECONDS
+          : v.duration + BUFFER_SECONDS;
 
-          if (now >= end - 0.1 || v.ended) {
-            v.currentTime = start;
-            v.play().catch(() => { });
-          }
+        if (v.currentTime >= end - 0.1 || v.ended) {
+          v.currentTime = start;
+          v.play().catch(() => { });
         }
       }
     };
 
+    // 1. Event Listeners (Standard)
     v.addEventListener('timeupdate', runSync);
+    v.addEventListener('seeked', runSync);
+    v.addEventListener('playing', runSync);
+
+    // 2. High-Res Interval (0.1s Pulse to force logic past "stuck" points)
+    const pulseId = setInterval(runSync, 100);
 
     return () => {
       v.removeEventListener('timeupdate', runSync);
+      v.removeEventListener('seeked', runSync);
+      v.removeEventListener('playing', runSync);
+      clearInterval(pulseId);
     };
   }, [activeFile, findActiveIndex]);
 
