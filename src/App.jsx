@@ -211,29 +211,29 @@ const App = () => {
     if (!timeStr) return 0;
     if (typeof timeStr === 'number') return Math.max(0, timeStr);
 
-    // 1. Take only the FIRST part if there's a range (-, ~, to, 등)
+    // 1. Universal Parsing: Take the FIRST starting time if it's a range (-, ~, to)
     let raw = timeStr.toString().split(/[-~]/)[0];
 
-    // 2. Extract ONLY numbers, colons, and dots (Ignore [], spaces, etc.)
+    // 2. Cleaning: Extract ONLY numbers, colons (:), and dots (.)
     const clean = raw.replace(/[^\d:.]/g, '');
     if (!clean) return 0;
 
-    // 3. Robust Calculation Logic
+    // 3. Absolute Numeric Conversion
     const parts = clean.split(':');
     try {
       if (parts.length >= 2) {
-        // Reversed parts handles [SS.ms, MM, HH]
+        // Reverse calculation [SS.ms, MM, HH] to ensure index stability
         const rev = parts.reverse();
         const s = parseFloat(rev[0]) || 0;
         const m = parseFloat(rev[1]) || 0;
         const h = parseFloat(rev[2]) || 0;
         return (h * 3600) + (m * 60) + s;
       } else {
-        // Pure Seconds (e.g. "14", "105.1")
+        // Case with no colon: "105.1", "14" - Treat as raw total seconds
         return parseFloat(clean) || 0;
       }
     } catch (e) {
-      console.error("Timeline Parse Error:", timeStr, e);
+      console.error("Critical: Universal Sync Engine Parse Error:", timeStr, e);
       return 0;
     }
   };
