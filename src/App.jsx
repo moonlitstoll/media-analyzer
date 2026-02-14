@@ -77,12 +77,12 @@ const TranscriptItem = memo(({
       className={`
         group relative transition-all duration-300 ease-out rounded-xl sm:rounded-2xl border mb-3 scroll-mt-32
         ${isActive
-          ? 'bg-white border-indigo-200 shadow-xl shadow-indigo-100/50 ring-1 ring-indigo-500/20'
+          ? 'bg-indigo-600 border-indigo-700 shadow-2xl shadow-indigo-200 scale-[1.01]'
           : 'bg-white/80 border-slate-100 hover:border-indigo-100 hover:shadow-lg hover:shadow-slate-100/50 hover:bg-white'}
       `}
     >
       {/* Active Indicator */}
-      <div className={`absolute left-0 top-6 bottom-6 w-1 rounded-r-full transition-all duration-300 ${isActive ? 'bg-indigo-500' : 'bg-transparent group-hover:bg-indigo-200'}`} />
+      <div className={`absolute left-0 top-6 bottom-6 w-1 rounded-r-full transition-all duration-300 ${isActive ? 'bg-white/50' : 'bg-transparent group-hover:bg-indigo-200'}`} />
 
       {/* Looping Indicator (Top Right) */}
       {isLooping && (
@@ -99,7 +99,7 @@ const TranscriptItem = memo(({
             className={`
               flex items-center gap-2 px-2 py-1 rounded-full text-sm font-bold font-mono tracking-wide transition-all
               ${isActive
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
+                ? 'bg-white/20 text-white backdrop-blur-sm'
                 : 'bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'}
             `}
           >
@@ -110,7 +110,7 @@ const TranscriptItem = memo(({
           onClick={() => jumpToSentence(idx)}
           className={`
             text-xl sm:text-2xl md:text-3xl font-bold leading-relaxed cursor-pointer transition-colors duration-200 mb-2 px-1
-            ${isActive ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'}
+            ${isActive ? 'text-white' : 'text-slate-900'}
           `}
         >
           {item.text}
@@ -123,7 +123,7 @@ const TranscriptItem = memo(({
         <div className="flex justify-end">
           <button
             onClick={(e) => { e.stopPropagation(); toggleGlobalAnalysis(); }}
-            className="flex items-center gap-1 text-xs font-bold text-indigo-500 hover:text-indigo-700 uppercase tracking-wider px-2 py-1 hover:bg-indigo-50 rounded-lg transition-colors"
+            className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-lg transition-colors ${isActive ? 'text-white/80 hover:text-white hover:bg-white/10' : 'text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50'}`}
           >
             {showAnalysis ? 'Hide' : 'Show'}
             {showAnalysis ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -501,9 +501,9 @@ const App = () => {
   // Quick Sync Handler Removed
 
 
-  // 4-STEP EXPLICIT SYNC ENGINE (Commanded Logic)
+  // UNIFIED CRITICAL FIX: Identify Active Item (4-Step Logic)
   const findActiveIndex = useCallback((time, data) => {
-    if (!data || data.length === 0) return -1;
+    if (!data || data.length === 0) return 0; // Fallback to 0 if no data
 
     // 1. FILTER: Start Time <= Current Time
     const candidates = [];
@@ -513,12 +513,13 @@ const App = () => {
       }
     }
 
-    if (candidates.length === 0) return -1;
+    // Fallback: If no transcript has started yet, return index 0 as requested
+    if (candidates.length === 0) return 0;
 
-    // 2. SORT: Descending by Start Time
+    // 2. SORT: Descending by Start Time (Get the LATEST started)
     candidates.sort((a, b) => b.seconds - a.seconds);
 
-    // 3. SELECT: First Item (The latest one among those that started)
+    // 3. SELECT: First Item
     return candidates[0].originalIndex;
   }, []);
 
@@ -625,6 +626,7 @@ const App = () => {
   // --- STATE RESET LOGIC ---
   const resetPlayerState = useCallback(() => {
     setActiveSentenceIdx(-1);
+    activeIdxRef.current = -1; // CRITICAL: Reset the ref so the engine detects the first update
     setCurrentTime(0);
     setIsPlaying(false);
     setLoopingSentenceIdx(null);
@@ -1044,9 +1046,11 @@ const App = () => {
                     <ErrorBoundary>
                       {transcriptData.map((item, idx) => {
                         const isActive = idx === currentSentenceIdx;
+                        // COMPOSITE KEY: Prevents React from skipping repeated lyrics by using FileID + Index + Time
+                        const compositeKey = `${activeFileId}-${idx}-${item.seconds}`;
                         return (
                           <TranscriptItem
-                            key={idx}
+                            key={compositeKey}
                             item={item}
                             idx={idx}
                             isActive={isActive}
