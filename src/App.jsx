@@ -75,16 +75,16 @@ const TranscriptItem = memo(({
     <div
       ref={itemRef}
       className={`
-        group relative transition-all duration-300 ease-out mb-4 scroll-mt-24 rounded-2xl border p-4 sm:p-5
+        group relative transition-all duration-300 ease-out mb-4 scroll-mt-24 rounded-xl border-l-[4px] p-4 sm:p-5
         ${isActive
-          ? 'bg-purple-600 border-purple-600 shadow-xl scale-[1.02] z-10'
+          ? 'bg-transparent border-l-purple-700 border-t-slate-100 border-r-slate-100 border-b-slate-100 shadow-md z-10'
           : 'bg-white border-slate-100 opacity-90'}
       `}
     >
 
       {/* Looping Indicator */}
       {isLooping && (
-        <div className={`absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider animate-pulse shadow-sm border z-10 ${isActive ? 'bg-white/20 text-white border-white/30' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
+        <div className={`absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider animate-pulse shadow-sm border z-10 ${isActive ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
           <Repeat size={10} className="stroke-[3]" /> Looping
         </div>
       )}
@@ -96,7 +96,7 @@ const TranscriptItem = memo(({
             onClick={() => seekTo(item.seconds)}
             className={`
               flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-bold font-mono tracking-wide transition-all
-              ${isActive ? 'bg-white/20 text-white border border-white/30' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}
+              ${isActive ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}
             `}
           >
             <Play size={10} fill="currentColor" /> {item.timestamp}
@@ -106,7 +106,7 @@ const TranscriptItem = memo(({
           onClick={() => jumpToSentence(idx)}
           className={`
             text-xl sm:text-2xl md:text-3xl leading-relaxed cursor-pointer transition-all duration-300 mb-2 px-1
-            ${isActive ? 'text-white' : 'text-slate-900'}
+            ${isActive ? 'text-black font-bold' : 'text-slate-900'}
           `}
         >
           {item.text}
@@ -519,21 +519,21 @@ const App = () => {
   // Quick Sync Handler Removed
 
 
-  // MASTER FILTER-SORT-SELECT SYNC ENGINE
-  const findActiveIndex = useCallback((timeInSeconds, data) => {
+  // MASTER FILTER-SORT-SELECT SYNC ENGINE (ABSOLUTE COORDINATES)
+  const findActiveIndex = useCallback((timeInMs, data) => {
     if (!data || data.length === 0) return 0;
 
-    // 1. FILTER: Segments that have already started
+    // 1. FILTER: Segments that have already started (Absolute check)
     const candidates = data
-      .map((item, index) => ({ seconds: item.seconds, index }))
-      .filter(item => item.seconds <= timeInSeconds);
+      .map((item, index) => ({ startMs: item.startMs, index }))
+      .filter(item => item.startMs <= timeInMs);
 
     if (candidates.length === 0) return 0;
 
-    // 2. SORT: Descending by start time to get the latest one
-    candidates.sort((a, b) => b.seconds - a.seconds);
+    // 2. SORT: Descending by start time to find the LATEST started segment
+    candidates.sort((a, b) => b.startMs - a.startMs);
 
-    // 3. SELECT: Return the index of the first (latest) candidate
+    // 3. SELECT: Top 1
     return candidates[0].index;
   }, []);
 
@@ -546,10 +546,11 @@ const App = () => {
 
     const runSync = () => {
       const now = v.currentTime;
+      const nowMs = Math.floor(now * 1000); // Integer Milliseconds
       setCurrentTime(now);
 
-      // STICKY LOOKUP: Stateless search for the latest started item
-      const newIdx = findActiveIndex(now, activeFile.data);
+      // STICKY LOOKUP: Stateless search using Absolute Coordinates
+      const newIdx = findActiveIndex(nowMs, activeFile.data);
 
       if (newIdx !== activeIdxRef.current) {
         activeIdxRef.current = newIdx;
