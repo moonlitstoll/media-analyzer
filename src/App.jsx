@@ -130,46 +130,29 @@ const TranscriptItem = memo(({
             </div>
           )}
 
-          <div className="grid md:grid-cols-2 gap-2 sm:gap-4">
-            {/* Patterns */}
-            {item.patterns && item.patterns.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 text-amber-600 font-bold text-sm uppercase tracking-wider mb-2">
-                  <List size={14} /> Patterns
-                </div>
-                <div className="space-y-2">
-                  {item.patterns.map((pat, pi) => (
-                    <div key={pi} className="bg-amber-50/50 p-2.5 rounded-xl border border-amber-100/50">
-                      <span className="font-bold text-slate-800 text-lg block mb-0.5">{pat.term}</span>
-                      <span className="text-slate-600 text-base leading-relaxed block whitespace-pre-line">{pat.definition}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          {/* Patterns Section Removed */}
 
-            {/* Word Analysis */}
-            {item.words && item.words.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm uppercase tracking-wider mb-3">
-                  <BookOpen size={14} /> Word Analysis
-                </div>
-                <div className="divide-y divide-slate-100 border border-emerald-100/20 rounded-xl overflow-hidden bg-white">
-                  {item.words.map((w, wi) => (
-                    <div key={wi} className="p-1.5 flex items-start gap-2 px-1 sm:px-2 hover:bg-emerald-50/20 transition-colors">
-                      <span className="font-bold text-emerald-700 text-[13px] sm:text-base w-[35%] shrink-0 break-words leading-tight pt-0.5">{w.word}</span>
-                      <div className="flex-1 min-w-0">
-                        <span className="block text-slate-800 text-[13px] sm:text-sm font-bold leading-snug">{w.meaning}</span>
-                        {w.func && <span className="block text-slate-600 text-[12px] sm:text-sm mt-1 whitespace-pre-line leading-relaxed">{w.func}</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+          {/* Word Analysis */}
+          {item.words && item.words.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm uppercase tracking-wider mb-3">
+                <BookOpen size={14} /> Word Analysis
               </div>
-            )}
-          </div>
-
+              <div className="divide-y divide-slate-100 border border-emerald-100/20 rounded-xl overflow-hidden bg-white">
+                {item.words.map((w, wi) => (
+                  <div key={wi} className="p-1.5 flex items-start gap-2 px-1 sm:px-2 hover:bg-emerald-50/20 transition-colors">
+                    <span className="font-bold text-emerald-700 text-[13px] sm:text-base w-[35%] shrink-0 break-words leading-tight pt-0.5">{w.word}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="block text-slate-800 text-[13px] sm:text-sm font-bold leading-snug">{w.meaning}</span>
+                      {w.func && <span className="block text-slate-600 text-[12px] sm:text-sm mt-1 whitespace-pre-line leading-relaxed">{w.func}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+
       </div>
     </div>
   );
