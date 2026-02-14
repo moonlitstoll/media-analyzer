@@ -233,10 +233,8 @@ const App = () => {
 
   // Helper: Parse MM:SS.ms or total seconds to float
   const parseTime = (timeStr) => {
-    if (!timeStr) return 0.0;
+    if (!timeStr) return 0;
     const cleanStr = timeStr.toString().replace(/[\[\]\s]/g, '');
-
-    // RULE 2: MM:SS.ms to Total Seconds (Number)
     const parts = cleanStr.split(':');
     if (parts.length === 2) {
       const minutes = parseFloat(parts[0]) || 0;
@@ -285,14 +283,12 @@ const App = () => {
           }));
         }
 
-        // RULE 2: Explicit Numeric Conversion at Load Time
         let seconds = 0;
         if (typeof secondsValue === 'number') {
           seconds = secondsValue;
         } else if (typeof timestamp === 'string') {
           seconds = parseTime(timestamp);
         }
-        seconds = isNaN(seconds) ? 0 : seconds;
 
         let endSeconds = seconds + 3.0; // Default gap-fill: 3s
         if (typeof endValue === 'number') {
@@ -493,18 +489,14 @@ const App = () => {
   // Quick Sync Handler Removed
 
 
-  // RULE 1: Range-Based Sync Engine (The Range Rule)
+  // Simple Index Search
   const findActiveIndex = useCallback((time, data) => {
     if (!data || data.length === 0) return -1;
 
-    // Active Line = (Start Time <= Current Time < Next Line Start Time)
     return data.findIndex((item, i) => {
       const start = item.seconds;
-      const nextStart = (i < data.length - 1)
-        ? data[i + 1].seconds
-        : (videoRef.current?.duration || Infinity);
-
-      return time >= start && time < nextStart;
+      const end = (i < data.length - 1) ? data[i + 1].seconds : (videoRef.current?.duration || Infinity);
+      return time >= start && time < end;
     });
   }, []);
 
@@ -519,7 +511,6 @@ const App = () => {
       const now = v.currentTime;
       setCurrentTime(now);
 
-      // RULE 3: Stateless Lookup (Seek Resilience)
       const newIdx = findActiveIndex(now, activeFile.data);
 
       if (newIdx !== activeIdxRef.current) {
