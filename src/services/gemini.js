@@ -77,9 +77,14 @@ export async function analyzeMedia(file, apiKey) {
     console.log(`Analyzing file: ${file.name} (${file.type}, ${file.size} bytes)`);
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash-latest"
-    }, { apiVersion: "v1" });
+
+    // Model fallback list
+    const MODELS_TO_TRY = [
+        "gemini-1.5-flash",
+        "models/gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-2.0-flash-exp"
+    ];
 
     try {
         // Determine MIME type with fallback
@@ -96,39 +101,70 @@ export async function analyzeMedia(file, apiKey) {
         // Convert file to base64
         const base64Data = await fileToGenerativePart(file);
 
-        // Retry logic for 503 Overloaded errors
         let result;
-        let retryCount = 0;
-        const maxRetries = 3;
-        let delay = 2000;
+        let lastError;
 
-        while (true) {
-            try {
-                result = await model.generateContent([
-                    SYSTEM_PROMPT,
-                    {
-                        inlineData: {
-                            data: base64Data,
-                            mimeType: mimeType,
+        // Try each model until one succeeds
+        for (const modelName of MODELS_TO_TRY) {
+            console.log(`Attempting analysis with model: ${modelName} (v1beta)`);
+            const model = genAI.getGenerativeModel({ model: modelName }, { apiVersion: "v1beta" });
+
+            let retryCount = 0;
+            const maxRetries = 2;
+            let delay = 2000;
+            let modelSuccess = false;
+
+            while (retryCount <= maxRetries) {
+                try {
+                    result = await model.generateContent([
+                        SYSTEM_PROMPT,
+                        {
+                            inlineData: {
+                                data: base64Data,
+                                mimeType: mimeType,
+                            },
                         },
-                    },
-                ]);
-                break; // Success, exit loop
-            } catch (err) {
-                if ((err.message.includes("503") || err.message.includes("overloaded")) && retryCount < maxRetries) {
-                    retryCount++;
-                    console.warn(`Model overloaded (503). Retrying attempt ${retryCount}/${maxRetries} in ${delay}ms...`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2; // Exponential backoff
-                    continue;
+                    ]);
+                    modelSuccess = true;
+                    break; // Success with this model
+                } catch (err) {
+                    const errorMsg = err.message.toLowerCase();
+
+                    // 1. Check for 503/Overloaded (Retry same model)
+                    if (errorMsg.includes("503") || errorMsg.includes("overloaded")) {
+                        retryCount++;
+                        if (retryCount <= maxRetries) {
+                            console.warn(`Model ${modelName} overloaded. Retrying (${retryCount}/${maxRetries})...`);
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2;
+                            continue;
+                        }
+                    }
+
+                    // 2. Check for 404/NotFound (Try next model immediately)
+                    if (errorMsg.includes("404") || errorMsg.includes("not found")) {
+                        console.warn(`Model ${modelName} not found (404). Trying fallback...`);
+                        lastError = err;
+                        break; // Exit while, try next model in for loop
+                    }
+
+                    // 3. Other errors
+                    lastError = err;
+                    console.error(`Error with model ${modelName}:`, err);
+                    break; // Try next model or throw if last
                 }
-                throw err; // Re-throw other errors or if max retries reached
             }
+
+            if (modelSuccess) break; // We found a working model
+        }
+
+        if (!result) {
+            throw lastError || new Error("All fallback models failed to respond.");
         }
 
         const response = await result.response;
         const text = response.text();
-        console.log("Gemini Raw Response:", text.substring(0, 200) + "..."); // Log start of response
+        console.log("Gemini Raw Response (First 100 chars):", text.substring(0, 100));
 
         // Clean up markdown
         const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
