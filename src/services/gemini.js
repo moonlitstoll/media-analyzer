@@ -78,12 +78,11 @@ export async function analyzeMedia(file, apiKey) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    // Model fallback list (Gemini 2.5 usually refers to 1.5 Pro)
+    // Fixed version identifiers as per Google AI Studio standard
     const MODELS_TO_TRY = [
-        "gemini-1.5-pro",
-        "gemini-2.0-flash-exp",
-        "gemini-1.5-flash",
-        "models/gemini-1.5-flash"
+        "gemini-1.5-pro-002",
+        "gemini-1.5-flash-002",
+        "gemini-2.0-flash-exp"
     ];
 
     try {
@@ -105,8 +104,13 @@ export async function analyzeMedia(file, apiKey) {
         let lastError;
 
         // Try each model until one succeeds
-        for (const modelName of MODELS_TO_TRY) {
-            console.log(`Attempting analysis with model: ${modelName} (v1beta)`);
+        for (let rawName of MODELS_TO_TRY) {
+            // Clean model ID to prevent redundant 'models/' prefix
+            const modelName = rawName.startsWith('models/') ? rawName.replace('models/', '') : rawName;
+
+            console.log(`Diagnostic: Expected URL: https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey.substring(0, 4)}...`);
+            console.log(`Attempting analysis with fixed-version model: ${modelName} (v1beta)`);
+
             const model = genAI.getGenerativeModel({ model: modelName }, { apiVersion: "v1beta" });
 
             let retryCount = 0;
@@ -126,7 +130,7 @@ export async function analyzeMedia(file, apiKey) {
                         },
                     ]);
                     modelSuccess = true;
-                    break; // Success with this model
+                    break;
                 } catch (err) {
                     const errorMsg = err.message.toLowerCase();
 
@@ -143,23 +147,23 @@ export async function analyzeMedia(file, apiKey) {
 
                     // 2. Check for 404/NotFound (Try next model immediately)
                     if (errorMsg.includes("404") || errorMsg.includes("not found")) {
-                        console.warn(`Model ${modelName} not found (404). Trying fallback...`);
+                        console.warn(`Model ${modelName} not found (404). Checking next fallback...`);
                         lastError = err;
-                        break; // Exit while, try next model in for loop
+                        break;
                     }
 
                     // 3. Other errors
                     lastError = err;
                     console.error(`Error with model ${modelName}:`, err);
-                    break; // Try next model or throw if last
+                    break;
                 }
             }
 
-            if (modelSuccess) break; // We found a working model
+            if (modelSuccess) break;
         }
 
         if (!result) {
-            throw lastError || new Error("All fallback models failed to respond.");
+            throw lastError || new Error("All fallback models failed to respond. Check API Key and Model availability.");
         }
 
         const response = await result.response;
