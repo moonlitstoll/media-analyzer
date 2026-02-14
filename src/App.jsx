@@ -233,24 +233,17 @@ const App = () => {
 
   // Helper: Parse MM:SS.ms or total seconds to float
   const parseTime = (timeStr) => {
-    if (timeStr === undefined || timeStr === null) return 0;
-    if (typeof timeStr === 'number') return timeStr;
-
-    // Remove brackets and whitespace
+    if (!timeStr) return 0;
     const cleanStr = timeStr.toString().replace(/[\[\]\s]/g, '');
 
-    // Split by colon
     const parts = cleanStr.split(':');
     if (parts.length === 2) {
-      // MM:SS.ms
       const minutes = parseFloat(parts[0]) || 0;
       const seconds = parseFloat(parts[1]) || 0;
       return (minutes * 60) + seconds;
-    } else if (parts.length === 1) {
-      // Just seconds
+    } else {
       return parseFloat(parts[0]) || 0;
     }
-    return 0;
   };
 
   // Helper: Sanitize & Sort Data
@@ -498,13 +491,15 @@ const App = () => {
   // Quick Sync Handler Removed
 
 
-  // Stateless Index Calculation (Every tick search)
+  // Simple Index Calculation (Standard Range Check)
   const findActiveIndex = useCallback((time, data) => {
     if (!data || data.length === 0) return -1;
 
-    // Explicit Bound Check: time must be between [seconds, endSeconds)
-    // If not found, returns -1 which clears the highlight
-    return data.findIndex(item => time >= item.seconds && time < item.endSeconds);
+    return data.findIndex((item, i) => {
+      const start = item.seconds;
+      const nextStart = (i < data.length - 1) ? data[i + 1].seconds : (videoRef.current?.duration || Infinity);
+      return time >= start && time < nextStart;
+    });
   }, []);
 
   // Stateless Sync Engine (High-Res Event Listening)
@@ -518,7 +513,6 @@ const App = () => {
       const now = v.currentTime;
       setCurrentTime(now);
 
-      // NO REFS: Fresh lookup on every timeupdate/tick
       const newIdx = findActiveIndex(now, activeFile.data);
 
       if (newIdx !== activeIdxRef.current) {
@@ -526,13 +520,15 @@ const App = () => {
         setActiveSentenceIdx(newIdx);
       }
 
-      // Loop Logic (Buffered)
+      // Standard Loop Logic
       const loopIdx = loopingSentenceIdxRef.current;
       if (loopIdx !== null) {
         const item = activeFile.data[loopIdx];
         if (item) {
           const start = Math.max(0, item.seconds - BUFFER_SECONDS);
-          const end = item.endSeconds + BUFFER_SECONDS;
+          const end = (loopIdx < activeFile.data.length - 1)
+            ? activeFile.data[loopIdx + 1].seconds + BUFFER_SECONDS
+            : v.duration + BUFFER_SECONDS;
 
           if (now >= end - 0.1 || v.ended) {
             v.currentTime = start;
