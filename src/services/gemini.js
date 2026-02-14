@@ -25,12 +25,26 @@ const SYSTEM_PROMPT = `
 - **빈 설명 절대 금지**: 단어만 나열하고 우측 설명("m", "f") 칸을 비워두는 행위는 강력히 금지됩니다. 모든 항목은 반드시 상세한 뜻과 풀이를 가져야 합니다.
 - **길이 무시**: 문장이 아무리 길어도 모든 단어를 하나씩 전수 분석하십시오.
 
-**[4. 골드 스탠다드 예시 (Output Template)]**
-- 예시 1 (복합어): Hợp đồng: [명사] 계약 | Hợp (合 합 - 합하다) + đồng (同 동 - 한가지)
-- 예시 2 (한자어): thú vị: [형용사] 재미있다 | thú (趣 취 - 재미) + vị (味 미 - 맛)
-- 예시 3 (어미): thôi: [어미] ~일 뿐 (한정 종결)
-- 예시 4 (외래어): double-check: [동사] 재확인 | double (두 번) + check (확인)
-- 예시 5 (구/덩어리): In case of: [전치사구] ~의 경우에 (조건)
+**[4. 골드 스탠다드 예시 (Absolute Gold Standard)]**
+모든 분석은 아래 예시의 깊이와 포맷을 100% 복제하십시오.
+
+**예시 1 (VN): "Hợp đồng này được ký rồi, mà mình còn chưa nhận được tiền cọc nhỉ?"**
+- Hợp đồng: [명사] 계약 | Hợp (合 합 - 합하다) + đồng (同 동 - 한가지)
+- được ký: [동사구] 체결되다 | được (긍정 수동) + ký (서명하다)
+- còn chưa: [부사구] 아직 ~않다 | còn (여전히) + chưa (아직 ~않다)
+- tiền cọc: [명사구] 계약금 | tiền (錢 전 - 돈) + cọc (보증)
+
+**예시 2 (VN): "Tiếng Việt càng học càng thấy thú vị."**
+- Tiếng Việt: [명사구] 베트남어 | Tiếng (말) + Việt (越 월 - 베트남)
+- thú vị: [형용사] 재미있다 | thú (趣 취 - 재미) + vị (味 미 - 맛)
+
+**예시 3 (EN): "Please double-check the container number, as the client is waiting for the update."**
+- double-check: [동사] 재확인 | double (두 번) + check (확인)
+- is waiting for: [동사구] 기다리는 중 (진행형)
+
+**예시 4 (EN): "In case of any data mismatch, please flag the error immediately."**
+- In case of: [전치사구] ~의 경우에 (조건)
+- data mismatch: [명사구] 데이터 불일치 | data (자료) + mismatch (부조화)
 
 **[5. JSON 응답 규격]**
 - 모든 부연 설명은 **한국어(Korean)**로 작성하십시오.
