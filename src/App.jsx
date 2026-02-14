@@ -53,12 +53,12 @@ const TranscriptItem = memo(({
 }) => {
   const itemRef = useRef(null);
 
-  // 1. Force Auto-Scroll on Active Change (Always Center)
+  // 1. Force Auto-Scroll on Active Change (Always Top)
   useEffect(() => {
     if (isActive && itemRef.current) {
       itemRef.current.scrollIntoView({
         behavior: 'smooth',
-        block: 'center',
+        block: 'start',
         inline: 'nearest'
       });
     }
