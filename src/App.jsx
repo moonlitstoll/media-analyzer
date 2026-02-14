@@ -141,10 +141,10 @@ const TranscriptItem = memo(({
               <div className="divide-y divide-slate-100 border border-emerald-100/20 rounded-xl overflow-hidden bg-white">
                 {item.words.map((w, wi) => (
                   <div key={wi} className="py-1 px-2 flex items-start gap-2 hover:bg-emerald-50/20 transition-colors">
-                    <span className="font-bold text-emerald-700 text-[13px] sm:text-[15px] w-[35%] shrink-0 break-words leading-tight pt-0.5">{w.word}</span>
+                    <span className="font-bold text-emerald-700 text-[16px] sm:text-[18px] w-[35%] shrink-0 break-words leading-tight pt-0.5">{w.word}</span>
                     <div className="flex-1 min-w-0">
-                      <span className="block text-slate-800 text-[13px] sm:text-[14px] font-bold leading-[1.3]">{w.meaning}</span>
-                      {w.func && <span className="block text-slate-600 text-[11px] sm:text-[13px] mt-0.5 whitespace-pre-line leading-relaxed">{w.func}</span>}
+                      <span className="block text-slate-800 text-[15px] sm:text-[16px] font-bold leading-[1.3]">{w.meaning}</span>
+                      {w.func && <span className="block text-slate-600 text-[13px] sm:text-[14px] mt-0.5 whitespace-pre-line leading-relaxed">{w.func}</span>}
                     </div>
                   </div>
                 ))}
