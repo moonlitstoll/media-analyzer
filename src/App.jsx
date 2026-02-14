@@ -74,7 +74,10 @@ const TranscriptItem = memo(({
   return (
     <div
       ref={itemRef}
-      className="group relative transition-all duration-300 ease-out border-b border-slate-50 mb-4 pt-4 pb-6 scroll-mt-24 bg-transparent active:bg-slate-50"
+      className={`
+        group relative transition-all duration-300 ease-out border-b border-slate-50 mb-4 pt-4 pb-6 scroll-mt-24 
+        ${isActive ? 'border-l-[4px] border-l-purple-600 bg-transparent' : 'bg-transparent active:bg-slate-50'}
+      `}
     >
 
       {/* Looping Indicator (Top Right) */}
@@ -89,7 +92,10 @@ const TranscriptItem = memo(({
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
           <button
             onClick={() => seekTo(item.seconds)}
-            className="flex items-center gap-2 px-2 py-1 rounded-full text-sm font-bold font-mono tracking-wide transition-all bg-slate-50 text-slate-400 hover:bg-slate-100"
+            className={`
+              flex items-center gap-2 px-2 py-1 rounded-full text-sm font-bold font-mono tracking-wide transition-all 
+              ${isActive ? 'bg-purple-50 text-purple-600' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}
+            `}
           >
             <Play size={10} fill="currentColor" /> {item.timestamp}
           </button>
@@ -98,7 +104,7 @@ const TranscriptItem = memo(({
           onClick={() => jumpToSentence(idx)}
           className={`
             text-xl sm:text-2xl md:text-3xl leading-relaxed cursor-pointer transition-all duration-300 mb-2 px-1
-            text-slate-900 font-medium
+            ${isActive ? 'text-purple-600 font-bold' : 'text-slate-900 font-medium'}
           `}
         >
           {item.text}
@@ -223,19 +229,38 @@ const App = () => {
 
 
 
-  // Helper: Parse MM:SS.ms or total seconds to float
+  // Helper: Parse HH:MM:SS.ms or MM:SS.ms or total seconds to float
   const parseTime = (timeStr) => {
     if (!timeStr) return 0.0;
-    const cleanStr = timeStr.toString().replace(/[\[\]\s]/g, '');
+    if (typeof timeStr === 'number') return timeStr;
 
-    // STICKY RULE: Strict (Minutes * 60) + Seconds conversion
+    // Remove brackets, spaces, and other non-time characters
+    const cleanStr = timeStr.toString().replace(/[\[\]\s\r\n\t]/g, '').trim();
+
+    // Split by colons
     const parts = cleanStr.split(':');
-    if (parts.length === 2) {
-      const minutes = parseFloat(parts[0]) || 0;
-      const seconds = parseFloat(parts[1]) || 0;
-      return (minutes * 60) + seconds;
+
+    try {
+      if (parts.length === 3) {
+        // HH:MM:SS.ms
+        const hours = parseFloat(parts[0]) || 0;
+        const minutes = parseFloat(parts[1]) || 0;
+        const seconds = parseFloat(parts[2]) || 0;
+        return (hours * 3600) + (minutes * 60) + seconds;
+      } else if (parts.length === 2) {
+        // MM:SS.ms
+        const minutes = parseFloat(parts[0]) || 0;
+        const seconds = parseFloat(parts[1]) || 0;
+        return (minutes * 60) + seconds;
+      } else if (parts.length === 1) {
+        // SS.ms or total seconds
+        return parseFloat(parts[0]) || 0;
+      }
+    } catch (e) {
+      console.error("Error parsing time string:", timeStr, e);
     }
-    return parseFloat(parts[0]) || 0;
+
+    return 0.0;
   };
 
   // Helper: Sanitize & Sort Data
@@ -493,17 +518,19 @@ const App = () => {
   const findActiveIndex = useCallback((time, data) => {
     if (!data || data.length === 0) return 0;
 
-    // 1. FILTER: Start Time <= Current Time
-    const candidates = data
-      .map((item, index) => ({ index, seconds: item.seconds }))
-      .filter(item => item.seconds <= time);
+    // FORCED NUMERIC SYNC: Find the latest segment where start time <= current time
+    let activeIdx = 0;
+    let maxStartTime = -1;
 
-    // 2. SORT: Descending by Start Time (LATEST started)
-    // 3. SELECT: Top 1
-    if (candidates.length === 0) return 0;
+    for (let i = 0; i < data.length; i++) {
+      const segmentTime = data[i].seconds;
+      if (segmentTime <= time && segmentTime > maxStartTime) {
+        maxStartTime = segmentTime;
+        activeIdx = i;
+      }
+    }
 
-    candidates.sort((a, b) => b.seconds - a.seconds);
-    return candidates[0].index;
+    return activeIdx;
   }, []);
 
   // Stateless Sync Engine (High-Res Event Listening)
