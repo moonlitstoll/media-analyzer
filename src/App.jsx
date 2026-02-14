@@ -74,9 +74,13 @@ const TranscriptItem = memo(({
   return (
     <div
       ref={itemRef}
-      className="group relative transition-all duration-300 ease-out rounded-xl sm:rounded-2xl border mb-3 scroll-mt-32 bg-white/80 border-slate-100 hover:border-indigo-100 hover:shadow-lg hover:shadow-slate-100/50 hover:bg-white"
+      className={`
+        group relative transition-all duration-300 ease-out rounded-xl sm:rounded-2xl border mb-3 scroll-mt-32
+        ${isActive ? 'bg-white border-indigo-200 shadow-xl shadow-indigo-50/50' : 'bg-white/80 border-slate-100 hover:border-slate-200 hover:bg-white'}
+      `}
     >
-      {/* Active Indicator Removed for Cleanup */}
+      {/* Subtle indicator for active sentence */}
+      <div className={`absolute left-0 top-1/4 h-1/2 w-1 rounded-r-full transition-all duration-300 ${isActive ? 'bg-indigo-600' : 'bg-transparent'}`} />
 
       {/* Looping Indicator (Top Right) */}
       {isLooping && (
@@ -90,14 +94,20 @@ const TranscriptItem = memo(({
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
           <button
             onClick={() => seekTo(item.seconds)}
-            className="flex items-center gap-2 px-2 py-1 rounded-full text-sm font-bold font-mono tracking-wide transition-all bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600"
+            className={`
+              flex items-center gap-2 px-2 py-1 rounded-full text-sm font-bold font-mono tracking-wide transition-all
+              ${isActive ? 'bg-indigo-50 text-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}
+            `}
           >
             <Play size={10} fill="currentColor" /> {item.timestamp}
           </button>
         </div>
         <div
           onClick={() => jumpToSentence(idx)}
-          className="text-xl sm:text-2xl md:text-3xl font-bold leading-relaxed cursor-pointer transition-colors duration-200 mb-2 px-1 text-slate-900"
+          className={`
+            text-xl sm:text-2xl md:text-3xl leading-relaxed cursor-pointer transition-colors duration-200 mb-2 px-1
+            ${isActive ? 'text-indigo-600 font-extrabold scale-[1.01]' : 'text-slate-900 font-bold'}
+          `}
         >
           {item.text}
         </div>
