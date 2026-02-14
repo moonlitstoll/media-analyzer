@@ -75,7 +75,7 @@ const TranscriptItem = memo(({
     <div
       ref={itemRef}
       className={`
-        group relative transition-all duration-300 ease-out mb-4 rounded-xl border border-l-[4px] p-4 sm:p-5
+        group relative transition-all duration-300 ease-out mb-4 rounded-xl border border-l-[4px] p-3 sm:px-4 sm:py-5
         ${isActive
           ? 'bg-transparent border-l-purple-700 border-t-slate-100 border-r-slate-100 border-b-slate-100 shadow-md z-10'
           : 'bg-white border-slate-100 opacity-90'}
@@ -130,7 +130,7 @@ const TranscriptItem = memo(({
             </div>
           )}
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-2 sm:gap-4">
             {/* Patterns */}
             {item.patterns && item.patterns.length > 0 && (
               <div>
@@ -154,13 +154,13 @@ const TranscriptItem = memo(({
                 <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm uppercase tracking-wider mb-3">
                   <BookOpen size={14} /> Word Analysis
                 </div>
-                <div className="divide-y divide-emerald-100/50 border border-emerald-100/30 rounded-xl overflow-hidden bg-white">
+                <div className="divide-y divide-slate-100 border border-emerald-100/20 rounded-xl overflow-hidden bg-white">
                   {item.words.map((w, wi) => (
-                    <div key={wi} className="p-2.5 flex items-start gap-3 hover:bg-emerald-50/30 transition-colors">
-                      <span className="font-bold text-emerald-700 text-base min-w-[30%] break-words">{w.word}</span>
-                      <div className="flex-1">
-                        <span className="block text-slate-700 text-sm font-medium">{w.meaning}</span>
-                        {w.func && <span className="block text-slate-600 text-sm mt-1 whitespace-pre-line leading-relaxed">{w.func}</span>}
+                    <div key={wi} className="p-1.5 flex items-start gap-2 px-1 sm:px-2 hover:bg-emerald-50/20 transition-colors">
+                      <span className="font-bold text-emerald-700 text-[13px] sm:text-base w-[35%] shrink-0 break-words leading-tight pt-0.5">{w.word}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="block text-slate-800 text-[13px] sm:text-sm font-bold leading-snug">{w.meaning}</span>
+                        {w.func && <span className="block text-slate-600 text-[12px] sm:text-sm mt-1 whitespace-pre-line leading-relaxed">{w.func}</span>}
                       </div>
                     </div>
                   ))}
