@@ -53,12 +53,16 @@ const TranscriptItem = memo(({
 }) => {
   const itemRef = useRef(null);
 
-  // 1. Smooth Auto-Scroll on Active Change (Playback)
+  // 1. Force Auto-Scroll on Active Change (Always Center)
   useEffect(() => {
-    if (isActive && itemRef.current && !isGlobalLooping) {
-      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (isActive && itemRef.current) {
+      itemRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest'
+      });
     }
-  }, [isActive, isGlobalLooping]);
+  }, [isActive]);
 
   // 2. Instant Scroll Anchoring on Layout Change (Toggle Analysis)
   useLayoutEffect(() => {
