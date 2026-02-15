@@ -189,16 +189,7 @@ const App = () => {
   const [loopingSentenceIdx, setLoopingSentenceIdx] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.playbackRate = playbackRate;
-    }
-  }, [playbackRate, mediaUrl, isAnalyzing, activeFileId]);
 
-  const handleRateChange = (rate) => {
-    setPlaybackRate(rate);
-    localStorage.setItem('miniapp_playback_rate', rate.toString());
-  };
 
   // UI state
   const [showSettings, setShowSettings] = useState(false);
@@ -224,6 +215,17 @@ const App = () => {
   const transcriptData = activeFile?.data || [];
   const mediaUrl = activeFile?.url || null;
   const isAnalyzing = activeFile?.isAnalyzing || false;
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = playbackRate;
+    }
+  }, [playbackRate, mediaUrl, isAnalyzing, activeFileId]);
+
+  const handleRateChange = (rate) => {
+    setPlaybackRate(rate);
+    localStorage.setItem('miniapp_playback_rate', rate.toString());
+  };
 
 
 
