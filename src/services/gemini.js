@@ -6,6 +6,7 @@ const SYSTEM_PROMPT = `
 **[0. 미디어 분석 엔진 (Mandatory Engine)]**
 - **이산적 포인트 매칭 (Discrete Point Matching)**: 각 문장 시작 시점에만 타임라인을 기록하십시오. 범위(Range) 표기는 절대 금지입니다.
 - **Strict MM:SS Standard**: 모든 타임라인은 반드시 **[MM:SS]** 형식으로 출력하십시오. 60초 초과 시 반드시 분 단위로 환산하십시오. (예: 61 -> 01:01)
+- **Batch Context**: 특정 구간(예: 05:00 ~ 10:00)을 요청받으면 해당 구간의 모든 발화를 전수 분석하십시오.
 
 **[1. 제로 메모리 및 중복 제거 비활성화 (Zero-Memory Protocol)]**
 - **독립 분석 강제**: 미디어 전체에서 동일 가사/문장이 100번 반복되더라도, 100번 모두 **'완전한 분석'**을 새롭게 제공하십시오.
@@ -16,10 +17,6 @@ const SYSTEM_PROMPT = `
 - **나열형 문장 처리**: 쉼표(,)로 연결된 긴 단어 목록이나 관용구 나열은 토큰 소모와 상관없이 모든 항목을 개별 분석하십시오.
 - **0.5초 단위 분할**: 한 카드에 담기 너무 긴 리스트는 타임라인을 0.5초 단위로 쪼개어 여러 개의 JSON 객체(카드)로 나누어 생성하십시오. 모든 단어의 뜻이 출력되어야 합니다.
 
-**[3. 전수 발화 및 공백 제로 원칙 (No Omission & Gap Hunting)]**
-- **동적 갭 필러**: 이전 문장 종료와 다음 문장 시작 사이의 간격이 3초를 초과하면 오디오를 재탐색하여 텍스트를 강제 추출하십시오.
-- **안티 고스트 가드레일 (Zero Blank)**: 어떤 이유로든 분석이 비어있으면 안 됩니다. 정밀 분석 실패 시 최소한 **(반복 구간) 단어 뜻은 위와 동일합니다** 또는 번역 텍스트를 채워 넣어 빈 박스 출력을 차단하십시오. (단, 전수 분석이 최우선입니다.)
-
 **[3. Word Analysis 6대 분석 원칙 (Absolute Engine)]**
 1. **순차 분석**: 문장 내 단어가 등장하는 순서대로 빠짐없이 분석하십시오.
 2. **중복 설명 강제**: 앞서 나온 단어라도 반복되면 무조건 다시 설명하십시오. "위와 같음" 식의 생략은 금지입니다.
@@ -29,231 +26,201 @@ const SYSTEM_PROMPT = `
 5. **전수 분석 (No Omission)**: 전치사, 조사, 어미 등 문장의 모든 요소를 누락 없이 독립된 항목으로 처리하십시오.
 6. **Chunk(의미 덩어리) 분석**: 기계적 분절 대신 의미가 연결되는 덩어리(예: được ký, is waiting for) 단위로 묶어 직관적으로 설명하십시오.
 
-**[4. 누락 방지 가드레일 (Zero Blank Policy)]**
-- **섹션 필수**: 모든 데이터 유닛에는 반드시 "t"(번역)와 "w"(단어 분석) 배열이 존재해야 합니다.
-- **빈 설명 절대 금지**: 단어 분석 영역의 설명 칸을 비워두는 행위는 강력히 금지됩니다.
+**[4. 데이터 밀도 및 JSON 무결성 (Structural Integrity)]**
+- **강제 종료 방지**: 출력 제한(Token Limit)에 도달하기 직전이라면, 반드시 진행 중인 객체를 버리고 배열(`]`)과 모든 괄호를 안전하게 닫고 출력을 종료하십시오.
+- **구문 검사**: 모든 키(Key)와 값(Value)은 반드시 이중 따옴표(`"`)를 엄격히 준수하십시오. 불필요한 공백과 줄바꿈은 최소화하여 데이터 밀도를 높이십시오.
+    - ** 절대 원칙 **: "s", "o", "t", "w" 키는 반드시 존재해야 하며, "w" 배열은 절대 비워두지 마십시오.
 
-**[5. 골드 스탠다드 예시 (Absolute Gold Standard)]**
-모든 분석은 아래 예시의 깊이와 포맷을 100% 복제하십시오.
-
-**예시 1 (VN): "Hợp đồng này được ký rồi, mà mình còn chưa nhận được tiền cọc nhỉ?"**
-- Hợp đồng: [명사] 계약 | Hợp (合 합 - 합하다) + đồng (同 동 - 한가지)
-- được ký: [동사구] 체결되다 | được (긍정 수동) + ký (서명하다)
-- còn chưa: [부사구] 아직 ~않다 | còn (여전히) + chưa (아직 ~않다)
-- tiền cọc: [명사구] 계약금 | tiền (錢 전 - 돈) + cọc (보증)
-
-**예시 2 (VN): "Tiếng Việt càng học càng thấy thú vị."**
-- Tiếng Việt: [명사구] 베트남어 | Tiếng (말) + Việt (越 월 - 베트남)
-- thú vị: [형용사] 재미있다 | thú (趣 취 - 재미) + vị (味 미 - 맛)
-
-**예시 3 (EN): "Please double-check the container number, as the client is waiting for the update."**
-- double-check: [동사] 재확인 | double (두 번) + check (확인)
-- is waiting for: [동사구] 기다리는 중 (진행형)
-
-**예시 4 (EN): "In case of any data mismatch, please flag the error immediately."**
-- In case of: [전치사구] ~의 경우에 (조건)
-- data mismatch: [명사구] 데이터 불일치 | data (자료) + mismatch (부조화)
-
-**[6. JSON 응답 규격]**
-- 모든 부연 설명은 **한국어(Korean)**로 작성하십시오.
+** [5. JSON 응답 규격] **
+        - 모든 부연 설명은 ** 한국어(Korean) ** 로 작성하십시오.
 - JSON: "s": "MM:SS", "o": 원문, "t": 번역, "w": [{ "w": "단어/덩어리", "m": "[품사] 뜻", "f": "상세 분석/어원" }]
 
-부연 설명 없이 유효한 JSON Array만 출력하십시오. 모든 문장의 모든 단어를 전수 분석하십시오.
+부연 설명 없이 유효한 JSON Array만 출력하십시오.
 `;
 
-
+/**
+ * Helper to get media duration using HTML5 Video element
+ */
+async function getMediaDuration(file) {
+    return new Promise((resolve) => {
+        const url = URL.createObjectURL(file);
+        const media = document.createElement(file.type.startsWith('video') ? 'video' : 'audio');
+        media.src = url;
+        media.onloadedmetadata = () => {
+            URL.revokeObjectURL(url);
+            resolve(media.duration);
+        };
+        media.onerror = () => {
+            URL.revokeObjectURL(url);
+            resolve(0); // Fallback to 0
+        };
+    });
+}
 
 export async function analyzeMedia(file, apiKey) {
     if (!apiKey) throw new Error("API Key is required");
-
-    // Basic validation
     if (!file) throw new Error("No file provided");
 
-    // Size limit check removed to allow larger files as requested. 
-    // Browser base64 limit might still apply, but we allow the attempt.
-    console.log(`Analyzing file: ${file.name} (${file.type}, ${file.size} bytes)`);
+    const duration = await getMediaDuration(file);
+    console.log(`Analyzing file: ${ file.name } (${ file.type }, ${ file.size } bytes, Duration: ${ duration }s)`);
 
     const genAI = new GoogleGenerativeAI(apiKey);
+    const MODELS_TO_TRY = ["gemini-2.0-flash", "gemini-1.5-pro"]; // Prioritize available flash version
 
-    // Prioritize 2.5 Flash for maximum token capacity
-    const MODELS_TO_TRY = [
-        "gemini-2.5-flash",
-        "gemini-2.0-flash"
-    ];
-
-    try {
-        // Determine MIME type with fallback
-        let mimeType = file.type;
-        if (!mimeType) {
-            const ext = file.name.split('.').pop().toLowerCase();
-            if (ext === 'mp3') mimeType = 'audio/mp3';
-            else if (ext === 'wav') mimeType = 'audio/wav';
-            else if (ext === 'm4a') mimeType = 'audio/mp4';
-            else if (ext === 'mp4') mimeType = 'video/mp4';
-            else mimeType = 'audio/mpeg'; // Generic fallback
+    // 5 minutes break point as requested
+    const CHUNK_SIZE_SECONDS = 300; 
+    const chunks = [];
+    
+    if (duration > CHUNK_SIZE_SECONDS + 60) { // Small buffer (60s) before splitting
+        for (let start = 0; start < duration; start += CHUNK_SIZE_SECONDS) {
+            chunks.push({
+                start,
+                end: Math.min(start + CHUNK_SIZE_SECONDS, duration)
+            });
         }
+        console.log(`File duration ${ duration } s > ${ CHUNK_SIZE_SECONDS } s.Splitting into ${ chunks.length } chunks.`);
+    } else {
+        chunks.push({ start: 0, end: duration });
+    }
 
-        // Convert file to base64
-        const base64Data = await fileToGenerativePart(file);
+    const base64Data = await fileToGenerativePart(file);
+    let allProcessedData = [];
 
+    for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        console.log(`Processing Chunk ${ i + 1 } /${chunks.length}: ${Math.floor(chunk.start/60)}:${ String(Math.floor(chunk.start % 60)).padStart(2, '0') } ~${ Math.floor(chunk.end / 60) }:${ String(Math.floor(chunk.end % 60)).padStart(2, '0') } `);
+        
+        const chunkPrompt = `${ SYSTEM_PROMPT } \n\n ** IMPORTANT **: Analyze strictly the segment from ${ chunk.start } seconds to ${ chunk.end } seconds.`;
+        
         let result;
         let lastError;
 
-        // Try each model until one succeeds
-        for (let rawName of MODELS_TO_TRY) {
-            // Clean model ID to prevent redundant 'models/' prefix
-            const modelName = rawName.startsWith('models/') ? rawName.replace('models/', '') : rawName;
-
-            console.log(`Diagnostic: Expected URL: https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey.substring(0, 4)}...`);
-            console.log(`Attempting analysis with model: ${modelName} (JSON Mode)`);
-
+        for (let modelName of MODELS_TO_TRY) {
             const model = genAI.getGenerativeModel({
                 model: modelName,
-                generationConfig: {
-                    responseMimeType: "application/json",
-                }
+                generationConfig: { responseMimeType: "application/json" }
             }, { apiVersion: "v1beta" });
 
-
-            let retryCount = 0;
-            const maxRetries = 2;
-            let modelSuccess = false;
-
-            while (retryCount <= maxRetries) {
-                try {
-                    result = await model.generateContent([
-                        SYSTEM_PROMPT,
-                        {
-                            inlineData: {
-                                data: base64Data,
-                                mimeType: mimeType,
-                            },
-                        },
-                    ]);
-                    modelSuccess = true;
-                    break;
-                } catch (err) {
-                    const errorMsg = err.message.toLowerCase();
-
-                    // 1. Check for 503/Overloaded (Retry same model)
-                    if (errorMsg.includes("503") || errorMsg.includes("overloaded")) {
-                        retryCount++;
-                        if (retryCount <= maxRetries) {
-                            console.warn(`Model ${modelName} overloaded. Retrying (${retryCount}/${maxRetries})...`);
-                            await new Promise(resolve => setTimeout(resolve, 2000 * Math.pow(2, retryCount - 1)));
-                            continue;
-                        }
-                    }
-
-                    // 2. Check for 404/NotFound (Try next model immediately)
-                    if (errorMsg.includes("404") || errorMsg.includes("not found")) {
-                        console.warn(`Model ${modelName} not found (404). Checking next fallback...`);
-                        lastError = err;
-                        break;
-                    }
-
-                    // 3. Other errors
-                    lastError = err;
-                    console.error(`Error with model ${modelName}:`, err);
-                    break;
-                }
+            try {
+                result = await model.generateContent([
+                    chunkPrompt,
+                    { inlineData: { data: base64Data, mimeType: file.type || 'audio/mpeg' } },
+                ]);
+                lastError = null;
+                break;
+            } catch (err) {
+                lastError = err;
+                console.warn(`Model ${ modelName } failed for chunk ${ i+ 1}, trying next...`, err.message);
             }
-
-            if (modelSuccess) break;
         }
 
-        if (!result) {
-            throw lastError || new Error("All fallback models failed to respond. Check API Key and Model availability.");
-        }
+        if (!result) throw lastError || new Error("All models failed to process chunk " + (i+1));
 
         const response = await result.response;
         let text = response.text();
-        console.log("Gemini Raw (Start):", text.substring(0, 100));
+        text = text.replace(/```json / g, '').replace(/```/g, '').trim();
 
-        // 1. Markdown/Text Cleaning
-        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+// Enhanced Repair Logic
+const repairJson = (str) => {
+    str = str.trim();
+    // 1. Basic Balance
+    const openBraces = (str.match(/{/g) || []).length;
+    const closeBraces = (str.match(/}/g) || []).length;
+    const openBrackets = (str.match(/\[/g) || []).length;
+    const closeBrackets = (str.match(/]/g) || []).length;
 
-        // 2. Truncation Repair Logic
-        const tryRepairJson = (str) => {
-            str = str.trim();
-            if (str.endsWith(']')) return str;
+    if (str.endsWith(']')) return str;
 
-            console.warn("JSON might be truncated. Attempting repair...");
+    // 2. Quote Balance (Strict)
+    const quotes = (str.match(/"/g) || []).length;
+    if (quotes % 2 !== 0) str += '"';
 
-            let repaired = str;
-            const openBraces = (repaired.match(/{/g) || []).length;
-            const closeBraces = (repaired.match(/}/g) || []).length;
-            const openBrackets = (repaired.match(/\[/g) || []).length;
-            const closeBrackets = (repaired.match(/]/g) || []).length;
-
-            const quoteCount = (repaired.match(/"/g) || []).length;
-            if (quoteCount % 2 !== 0) repaired += '"';
-
-            if (openBraces > closeBraces) repaired += ' }';
-            if (openBrackets > closeBrackets) repaired += ' ]';
-
-            return repaired;
-        };
-
-        const processedText = tryRepairJson(text);
-
-        try {
-            const rawData = JSON.parse(processedText);
-
-            // [무적의 단일화 엔진] 포인트 기반 정규화 강제 적용 (Invariant Normalization)
-            if (Array.isArray(rawData)) {
-                return rawData.map(item => {
-                    let s = String(item.s || "").trim();
-
-                    // 1. 범위형 강제 제거: (-) 나 (~) 가 있으면 무조건 앞부분만 취함
-                    if (s.includes('-')) s = s.split('-')[0].trim();
-                    if (s.includes('~')) s = s.split('~')[0].trim();
-
-                    // 2. 기호 청소: 대괄호나 불필요한 공백 제거
-                    s = s.replace(/[\[\]\s]/g, '');
-
-                    // 3. 60진법 기반 MM:SS 강제 환산 (포인트 매칭 고정)
-                    if (s.includes(':')) {
-                        // MM:SS 포맷인 경우: 첫 번째 콜론 앞뒤만 취함 (밀리초 제거 포함)
-                        const parts = s.split(':');
-                        const m = parts[0].padStart(2, '0');
-                        const secPart = parts[1].split('.')[0].padStart(2, '0');
-                        s = `${m}:${secPart}`;
-                    } else if (s !== "" && !isNaN(parseFloat(s))) {
-                        // "14" 나 "105.1" 같이 순수 초 단위가 들어온 경우 -> MM:SS로 강제 환산
-                        const total = parseFloat(s);
-                        const m = Math.floor(total / 60);
-                        const sec = Math.floor(total % 60);
-                        s = `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-                    } else if (s === "") {
-                        s = "00:00";
-                    }
-
-                    return { ...item, s };
-                });
-            }
-            return rawData;
-        } catch (parseErr) {
-            console.error("JSON Parse Error:", parseErr);
-            // Fallback attempt: find the last valid object in the array
-            const lastValidIndex = processedText.lastIndexOf('},');
-            if (lastValidIndex !== -1) {
-                try {
-                    return JSON.parse(processedText.substring(0, lastValidIndex + 1) + ']');
-                } catch (e) { }
-            }
-            throw new Error(`AI Analysis Failed (JSON Syntax Error): ${parseErr.message}`);
+    // 3. Object Closure
+    if (openBraces > closeBraces) {
+        // If it looks like we're inside an object but it's truncated
+        const lastPropertyStart = str.lastIndexOf('":');
+        if (lastPropertyStart !== -1) {
+            // Try to go back to the last complete key-value pair if possible
+            // But for now, just close the braces
         }
+        for (let b = 0; b < (openBraces - closeBraces); b++) str += '}';
+    }
 
+    // 4. Array Closure
+    if (openBrackets > closeBrackets) str += ']';
+
+    return str;
+};
+
+const processedText = repairJson(text);
+
+try {
+    const chunkData = JSON.parse(processedText);
+    if (Array.isArray(chunkData)) {
+        // Normalize each item in chunk
+        const normalized = chunkData.map(item => {
+            let s = String(item.s || "").replace(/[\[\]\s]/g, '').split(/[-~]/)[0];
+            if (s.includes(':')) {
+                const parts = s.split(':');
+                const m = parts[0].padStart(2, '0');
+                const secPart = parts[1].split('.')[0].padStart(2, '0');
+                s = `${m}:${secPart}`;
+            } else if (s !== "" && !isNaN(parseFloat(s))) {
+                const total = parseFloat(s);
+                const m = Math.floor(total / 60);
+                const sec = Math.floor(total % 60);
+                s = `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+            } else if (s === "") {
+                s = "00:00";
+            }
+            return { ...item, s };
+        });
+        allProcessedData = [...allProcessedData, ...normalized];
+    } else {
+        console.warn("Chunk returned non-array JSON", chunkData);
+    }
+} catch (parseErr) {
+    console.error(`Chunk ${i + 1} Parse Error:`, parseErr);
+    // Fallback: try to match valid objects
+    try {
+        const matches = processedText.match(/{[^{]*"s"[^{]*}/g);
+        if (matches) {
+            const recovered = matches.map(m => JSON.parse(m));
+            allProcessedData = [...allProcessedData, ...recovered];
+        }
     } catch (e) {
-        console.error("Gemini Analysis Error:", e);
-        // Enhance error message for user
-        let msg = "AI Analysis Failed: " + e.message;
-        if (e.message.includes("400")) msg = "Invalid Request (400). File might be too large for browser preview. Please try a smaller snippet if this continues.";
-        if (e.message.includes("401") || e.message.includes("API key")) msg = "Invalid API Key. Please check your settings.";
-        if (e.message.includes("503") || e.message.includes("overloaded")) msg = "Server Overloaded (503). The AI model is currently busy. Please wait a moment and try again.";
-        if (e.message.includes("500")) msg = "Gemini Server Error. Please try again later.";
-        throw new Error(msg);
+        console.error("Failed to recover any objects from chunk", i + 1);
+    }
+}
+    }
+
+if (allProcessedData.length === 0) {
+    throw new Error("AI Analysis Failed: Could not extract any valid data from media chunks.");
+}
+
+// De-duplicate if same timestamp appears in different chunks (e.g. boundary overlap)
+const seen = new Set();
+return allProcessedData.filter(item => {
+    const key = `${item.s}_${item.o?.substring(0, 10)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+}).sort((a, b) => {
+    const parse = (ts) => {
+        const [m, s] = ts.split(':').map(Number);
+        return (m * 60) + s;
+    };
+    return parse(a.s) - parse(b.s);
+});
+}
+console.error("Gemini Analysis Error:", e);
+// Enhance error message for user
+let msg = "AI Analysis Failed: " + e.message;
+if (e.message.includes("400")) msg = "Invalid Request (400). File might be too large for browser preview. Please try a smaller snippet if this continues.";
+if (e.message.includes("401") || e.message.includes("API key")) msg = "Invalid API Key. Please check your settings.";
+if (e.message.includes("503") || e.message.includes("overloaded")) msg = "Server Overloaded (503). The AI model is currently busy. Please wait a moment and try again.";
+if (e.message.includes("500")) msg = "Gemini Server Error. Please try again later.";
+throw new Error(msg);
     }
 }
 
