@@ -184,7 +184,7 @@ const App = () => {
   // Player state
   const [activeSentenceIdx, setActiveSentenceIdx] = useState(-1);
   const [currentTime, setCurrentTime] = useState(0);
-  const [playbackRate, setPlaybackRate] = useState(1.0);
+  const [playbackRate, setPlaybackRate] = useState(parseFloat(localStorage.getItem('miniapp_playback_rate')) || 1.0);
   const [isDragging, setIsDragging] = useState(false);
   const [loopingSentenceIdx, setLoopingSentenceIdx] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -193,7 +193,12 @@ const App = () => {
     if (videoRef.current) {
       videoRef.current.playbackRate = playbackRate;
     }
-  }, [playbackRate]);
+  }, [playbackRate, mediaUrl, isAnalyzing, activeFileId]);
+
+  const handleRateChange = (rate) => {
+    setPlaybackRate(rate);
+    localStorage.setItem('miniapp_playback_rate', rate.toString());
+  };
 
   // UI state
   const [showSettings, setShowSettings] = useState(false);
@@ -612,8 +617,7 @@ const App = () => {
   const currentSentenceIdx = activeSentenceIdx;
 
 
-  // Rate
-  useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate; }, [playbackRate]);
+  // Rate effect handled above for better synchronization
 
   // Keyboard
   useEffect(() => {
@@ -1185,7 +1189,7 @@ const App = () => {
                               {[0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0].map(rate => (
                                 <button
                                   key={rate}
-                                  onClick={(e) => { e.stopPropagation(); setPlaybackRate(rate); setShowSpeedMenu(false); }}
+                                  onClick={(e) => { e.stopPropagation(); handleRateChange(rate); setShowSpeedMenu(false); }}
                                   className={`py-1.5 rounded text-[10px] font-bold ${Math.abs(playbackRate - rate) < 0.01 ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
                                 >
                                   {rate.toFixed(1)}
