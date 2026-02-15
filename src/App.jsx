@@ -44,7 +44,7 @@ class ErrorBoundary extends React.Component {
 
 
 const TranscriptItem = memo(({
-  item, idx, isActive, isGlobalLooping,
+  item, idx, isActive, isGlobalLooping, manualScrollNonce,
   seekTo, jumpToSentence, toggleLoop,
   onPrev, onNext,
   isLooping, showAnalysis, toggleGlobalAnalysis,
@@ -53,17 +53,24 @@ const TranscriptItem = memo(({
 }) => {
   const itemRef = useRef(null);
 
-  // 1. Focus Lock: Absolute Top Anchoring
-  // Trigger on: 1) Active change (non-looping), 2) Start of looping
+  // 1. Focus Lock: Conditional Anchoring
+  // Rules:
+  // A. If user manually triggered a jump (manualScrollNonce changed) -> ALWAYS scroll
+  // B. If auto-advancing in normal mode (Looping OFF) -> scroll
+  // C. If Looping back in Looping mode -> IGNORE (Keep user's manual scroll position)
   useEffect(() => {
-    const shouldScroll = (isActive && !isGlobalLooping && !isLooping) || isLooping;
-    if (shouldScroll && itemRef.current) {
-      itemRef.current.scrollIntoView({
-        behavior: isLooping ? 'auto' : 'smooth', // Instant lock during looping
-        block: 'start'
-      });
+    const isManualJump = manualScrollNonce > 0;
+    const isAutoAdvancing = isActive && !isGlobalLooping;
+
+    if (isActive && (isManualJump || isAutoAdvancing)) {
+      if (itemRef.current) {
+        itemRef.current.scrollIntoView({
+          behavior: isManualJump ? 'smooth' : 'smooth', // Can be 'auto' for instant, but smooth is nicer
+          block: 'start'
+        });
+      }
     }
-  }, [isActive, isGlobalLooping, isLooping]);
+  }, [isActive, manualScrollNonce, isGlobalLooping]);
 
   // 2. Resize Stabilization: Re-align to top when contents expand/collapse
   // This ensures that toggling Analysis doesn't push the lyric out of view.
@@ -193,6 +200,9 @@ const App = () => {
   const [cacheKeys, setCacheKeys] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSwitchingFile, setIsSwitchingFile] = useState(false);
+  const [manualScrollNonce, setManualScrollNonce] = useState(0);
+
+  const triggerManualScroll = useCallback(() => setManualScrollNonce(Date.now()), []);
 
 
   const videoRef = useRef(null);
@@ -432,6 +442,9 @@ const App = () => {
   const seekTo = useCallback((s) => {
     const v = videoRef.current;
     if (v) {
+      // Any direct seek is a manual intention to see that point
+      triggerManualScroll();
+
       // Ensure target time is within valid range
       const targetTime = Math.max(0, Math.min(s, v.duration || 999999));
 
@@ -447,7 +460,7 @@ const App = () => {
         });
       }
     }
-  }, []);
+  }, [triggerManualScroll]);
 
   const togglePlay = useCallback(() => {
     if (videoRef.current) {
@@ -457,6 +470,8 @@ const App = () => {
   }, []);
 
   const toggleLoop = useCallback((index) => {
+    triggerManualScroll();
+
     setLoopingSentenceIdx(prev => {
       const next = prev === index ? null : index;
       if (videoRef.current) {
@@ -471,15 +486,16 @@ const App = () => {
         seekTo(Math.max(0, activeFile.data[index].seconds - BUFFER_SECONDS));
       }
     }
-  }, [loopingSentenceIdx, seekTo, activeFile]);
+  }, [loopingSentenceIdx, seekTo, activeFile, triggerManualScroll]);
 
   const jumpToSentence = useCallback((index) => {
     if (activeFile?.data && index >= 0 && index < activeFile.data.length) {
+      triggerManualScroll();
       setLoopingSentenceIdx(null);
       // Play with Buffer: T - 0.8s
       seekTo(Math.max(0, activeFile.data[index].seconds - BUFFER_SECONDS));
     }
-  }, [seekTo, activeFile]);
+  }, [seekTo, activeFile, triggerManualScroll]);
 
   const handlePrev = useCallback((currentIndex) => {
     if (activeFile?.data?.length) {
@@ -601,6 +617,7 @@ const App = () => {
       if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
 
       const now = videoRef.current ? videoRef.current.currentTime : 0;
+      const data = activeFile.data;
       const currentIdx = activeSentenceIdx; // Use the globally calculated active index
 
       switch (e.code) {
@@ -1058,6 +1075,7 @@ const App = () => {
                             item={item}
                             idx={idx}
                             isActive={isActive}
+                            manualScrollNonce={manualScrollNonce}
                             seekTo={seekTo}
                             jumpToSentence={jumpToSentence}
                             toggleLoop={() => toggleLoop(idx)}
