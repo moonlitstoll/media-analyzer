@@ -57,18 +57,24 @@ const TranscriptItem = memo(({
   // Rules:
   // A. If user manually triggered a jump (manualScrollNonce changed) -> ALWAYS scroll
   // B. If auto-advancing in normal mode (Looping OFF) -> scroll
-  // C. If Looping back in Looping mode -> IGNORE (Keep user's manual scroll position)
+  // C. If Looping -> IGNORE all automatic scroll triggers.
+  const prevNonceRef = useRef(manualScrollNonce);
+
   useEffect(() => {
-    const isManualJump = manualScrollNonce > 0;
+    const isManualJump = manualScrollNonce !== prevNonceRef.current;
+    prevNonceRef.current = manualScrollNonce; // Update for next comparison
+
     const isAutoAdvancing = isActive && !isGlobalLooping;
 
-    if (isActive && (isManualJump || isAutoAdvancing)) {
-      if (itemRef.current) {
-        itemRef.current.scrollIntoView({
-          behavior: isManualJump ? 'smooth' : 'smooth', // Can be 'auto' for instant, but smooth is nicer
-          block: 'start'
-        });
-      }
+    // SCROLL BLOCK: In looping mode, we ONLY scroll if it's a manual jump.
+    // In normal mode, we also scroll on auto-advancing.
+    const shouldScroll = isActive && (isManualJump || (isAutoAdvancing && !isGlobalLooping));
+
+    if (shouldScroll && itemRef.current) {
+      itemRef.current.scrollIntoView({
+        behavior: isManualJump ? 'smooth' : 'smooth',
+        block: 'start'
+      });
     }
   }, [isActive, manualScrollNonce, isGlobalLooping]);
 
@@ -544,19 +550,21 @@ const App = () => {
       const now = v.currentTime;
       setCurrentTime(now);
 
-      // GLOBAL SEARCH: Every tick, identify index from absolute timeline
       const data = activeFile.data;
       if (!data || data.length === 0) return;
 
-      const newIdx = findActiveIndex(now, data);
+      const calculatedIdx = findActiveIndex(now, data);
+      const loopIdx = loopingSentenceIdxRef.current;
 
-      if (newIdx !== activeIdxRef.current) {
-        activeIdxRef.current = newIdx;
-        setActiveSentenceIdx(newIdx);
+      // FOCUS LOCK: Prioritize loopIdx for absolute stability during repeat
+      const actualIdx = (loopIdx !== null) ? loopIdx : calculatedIdx;
+
+      if (actualIdx !== activeIdxRef.current) {
+        activeIdxRef.current = actualIdx;
+        setActiveSentenceIdx(actualIdx);
       }
 
       // Loop Handling
-      const loopIdx = loopingSentenceIdxRef.current;
       if (loopIdx !== null && data[loopIdx]) {
         const item = data[loopIdx];
         const start = Math.max(0, item.seconds - BUFFER_SECONDS);
