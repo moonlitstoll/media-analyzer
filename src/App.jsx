@@ -98,15 +98,8 @@ const TranscriptItem = memo(({
       `}
     >
 
-      {/* Looping Indicator */}
-      {isLooping && (
-        <div className={`absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider animate-pulse shadow-sm border z-10 ${isActive ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
-          <Repeat size={10} className="stroke-[3]" /> Looping
-        </div>
-      )}
-
       <div>
-        {/* Header: Timestamp */}
+        {/* Header: Timestamp & Looping Indicator */}
         <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
           <button
             onClick={() => seekTo(item.seconds)}
@@ -117,6 +110,12 @@ const TranscriptItem = memo(({
           >
             <Play size={8} fill="currentColor" /> {item.timestamp}
           </button>
+
+          {isLooping && (
+            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[8px] font-bold uppercase tracking-tight animate-pulse border z-10 ${isActive ? 'bg-purple-50/50 text-purple-600 border-purple-100' : 'bg-amber-50/50 text-amber-600 border-amber-100'}`}>
+              <Repeat size={8} className="stroke-[3]" /> LOOPING
+            </div>
+          )}
         </div>
         <div
           onClick={() => jumpToSentence(idx)}
